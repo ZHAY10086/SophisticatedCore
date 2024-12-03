@@ -180,7 +180,7 @@
   "gui.sophisticatedcore.buttons.cancel": "取消",
   "gui.sophisticatedcore.buttons.transparent": "无颜色",
   "gui.sophisticatedcore.text_box.search_box": "点击以搜索",
-  "gui.sophisticatedcore.text_box.search_box_detail": "使用前缀@ 以按模组名称搜索",
+  "gui.sophisticatedcore.text_box.search_box_detail": "使用前缀@以按模组名称搜索",
   "gui.sophisticatedcore.settings.buttons.select_all_slots": "全选栏位",
   "gui.sophisticatedcore.settings.buttons.unselect_all_slots": "取消全选栏位",
   "gui.sophisticatedcore.settings.buttons.rotate": "旋转",
