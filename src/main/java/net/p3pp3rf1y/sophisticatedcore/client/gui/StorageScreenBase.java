@@ -37,6 +37,7 @@ import net.p3pp3rf1y.sophisticatedcore.client.gui.controls.*;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.Dimension;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.GuiHelper;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.Position;
+import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.TranslationHelper;
 import net.p3pp3rf1y.sophisticatedcore.common.gui.*;
 import net.p3pp3rf1y.sophisticatedcore.network.PacketHandler;
 import net.p3pp3rf1y.sophisticatedcore.network.TransferFullSlotMessage;
@@ -741,7 +742,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 	protected List<Component> getTooltipFromContainerItem(ItemStack itemStack) {
 		List<Component> ret = getTooltipFromItem(minecraft, itemStack);
 		if (hoveredSlot != null && hoveredSlot.getMaxStackSize() > 64) {
-			ret.add(Component.translatable("gui.sophisticatedcore.tooltip.stack_count",
+			ret.add(Component.translatable(TranslationHelper.INSTANCE.translGuiTooltip("stack_count"),
 							Component.literal(NumberFormat.getNumberInstance().format(itemStack.getCount())).withStyle(ChatFormatting.DARK_AQUA)
 									.append(Component.literal(" / ").withStyle(ChatFormatting.GRAY))
 									.append(Component.literal(NumberFormat.getNumberInstance().format(hoveredSlot.getMaxStackSize(itemStack))).withStyle(ChatFormatting.DARK_AQUA)))
