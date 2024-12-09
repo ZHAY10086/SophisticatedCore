@@ -12,10 +12,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
+import net.minecraftforge.items.wrapper.EmptyHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.IItemHandlerSimpleInserter;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ITrackedContentsItemHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ItemStackKey;
@@ -31,6 +33,16 @@ import java.util.function.*;
 
 public class InventoryHelper {
 	private InventoryHelper() {}
+
+	private static final List<Function<Player, IItemHandler>> PLAYER_INVENTORY_PROVIDERS = new ArrayList<>();
+
+	static {
+		registerPlayerInventoryProvider(player -> player.getCapability(ForgeCapabilities.ITEM_HANDLER).orElse(EmptyHandler.INSTANCE));
+	}
+
+	public static void registerPlayerInventoryProvider(Function<Player, IItemHandler> provider) {
+		PLAYER_INVENTORY_PROVIDERS.add(provider);
+	}
 
 	public static Optional<ItemStack> getItemFromEitherHand(Player player, Item item) {
 		ItemStack mainHandItem = player.getMainHandItem();
@@ -116,11 +128,15 @@ public class InventoryHelper {
 	}
 
 	public static ItemStack extractFromInventory(Item item, int count, IItemHandler inventory, boolean simulate) {
+		return extractFromInventory(stack -> stack.getItem() == item, count, inventory, simulate);
+	}
+
+	public static ItemStack extractFromInventory(Predicate<ItemStack> stackMatcher, int count, IItemHandler inventory, boolean simulate) {
 		ItemStack ret = ItemStack.EMPTY;
 		int slots = inventory.getSlots();
 		for (int slot = 0; slot < slots && ret.getCount() < count; slot++) {
 			ItemStack slotStack = inventory.getStackInSlot(slot);
-			if (slotStack.getItem() == item && (ret.isEmpty() || ItemHandlerHelper.canItemStacksStack(ret, slotStack))) {
+			if (stackMatcher.test(slotStack) && (ret.isEmpty() || ItemHandlerHelper.canItemStacksStack(ret, slotStack))) {
 				int toExtract = Math.min(slotStack.getCount(), count - ret.getCount());
 				ItemStack extractedStack = inventory.extractItem(slot, toExtract, simulate);
 				if (ret.isEmpty()) {
@@ -437,5 +453,21 @@ public class InventoryHelper {
 		});
 		double percentFilled = totalFilled.get() / handler.getSlots();
 		return Mth.floor(percentFilled * 14.0F) + (isEmpty.get() ? 0 : 1);
+	}
+
+	public static List<IItemHandler> getItemHandlersFromPlayerIncludingContainers(Player player) {
+		List<IItemHandler> itemHandlers = new ArrayList<>();
+		PLAYER_INVENTORY_PROVIDERS.forEach(provider -> {
+			IItemHandler itemHandler = provider.apply(player);
+			itemHandlers.add(itemHandler);
+			for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
+				ItemStack slotStack = itemHandler.getStackInSlot(slot);
+				if (slotStack.isEmpty()) {
+					continue;
+				}
+				slotStack.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(itemHandlers::add);
+			}
+		});
+		return itemHandlers;
 	}
 }
