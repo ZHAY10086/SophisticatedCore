@@ -70,7 +70,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 	private static final int ERROR_TEXT_COLOR = DyeColor.RED.getTextureDiffuseColor();
 	public static final int HEIGHT_WITHOUT_STORAGE_SLOTS = 114;
 
-	private UpgradeSettingsTabControl settingsTabControl = new UpgradeSettingsTabControl(new Position(0, 0), this, "");
+	private UpgradeSettingsTabControl settingsTabControl;
 	private final int numberOfUpgradeSlots;
 	@Nullable
 	private Button sortButton = null;
