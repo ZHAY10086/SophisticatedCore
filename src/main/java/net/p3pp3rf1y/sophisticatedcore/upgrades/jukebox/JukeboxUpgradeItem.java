@@ -74,7 +74,7 @@ public class JukeboxUpgradeItem extends UpgradeItemBase<JukeboxUpgradeItem.Wrapp
 							.ifPresent(song -> ServerStorageSoundHandler.startPlayingDisc(serverLevel, pos, storageUuid, song, () -> setIsPlaying(false))));
 		}
 
-		public void play(LivingEntity entity) {
+		public void play(Entity entity) {
 			play(entity.level(), (world, storageUuid) -> JukeboxSong.fromStack(entity.level().registryAccess(), getDisc())
 							.ifPresent(song -> ServerStorageSoundHandler.startPlayingDisc(world, entity.position(), storageUuid, entity.getId(), song, () -> setIsPlaying(false))));
 		}

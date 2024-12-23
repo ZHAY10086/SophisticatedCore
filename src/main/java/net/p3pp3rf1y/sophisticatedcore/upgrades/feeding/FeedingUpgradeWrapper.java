@@ -42,12 +42,12 @@ public class FeedingUpgradeWrapper extends UpgradeWrapperBase<FeedingUpgradeWrap
 
 	@Override
 	public void tick(@Nullable Entity entity, Level level, BlockPos pos) {
-		if (isInCooldown(level) || (entity != null && !(entity instanceof Player))) {
+		if (isInCooldown(level)) {
 			return;
 		}
 
 		boolean hungryPlayer = false;
-		if (entity == null) {
+		if (!(entity instanceof Player)) {
 			AtomicBoolean stillHungryPlayer = new AtomicBoolean(false);
 			level.getEntities(EntityType.PLAYER, new AABB(pos).inflate(FEEDING_RANGE), p -> true).forEach(p -> stillHungryPlayer.set(stillHungryPlayer.get() || feedPlayerAndGetHungry(p, level)));
 			hungryPlayer = stillHungryPlayer.get();

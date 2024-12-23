@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
@@ -64,7 +63,7 @@ public class StorageSoundHandler {
 		}
 
 		Entity entity = level.getEntity(entityId);
-		if (!(entity instanceof LivingEntity)) {
+		if (!(entity instanceof Entity)) {
 			stopStorageSound(storageUuid);
 			return;
 		}
