@@ -300,10 +300,8 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 		return addSlot(slot);
 	}
 
-	public void closeScreenIfSomethingMessedWithStorageItemStack() {
-		if (!isClientSide() && storageItemHasChanged()) {
-			player.closeContainer();
-		}
+	public boolean hasSomethingMessedWithStorage() {
+		return !isClientSide() && (storageItemHasChanged() || realInventorySlots.size() != storageWrapper.getInventoryHandler().getSlots() + NUMBER_OF_PLAYER_SLOTS);
 	}
 
 	protected boolean isClientSide() {
@@ -1455,7 +1453,10 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 
 	@Override
 	public void broadcastChanges() {
-		closeScreenIfSomethingMessedWithStorageItemStack();
+		if (hasSomethingMessedWithStorage()) {
+			player.closeContainer();
+			return;
+		}
 
 		synchronizeCarriedToRemote();
 		broadcastChangesIn(lastUpgradeSlots, remoteUpgradeSlots, upgradeSlots, getFirstUpgradeSlot());
