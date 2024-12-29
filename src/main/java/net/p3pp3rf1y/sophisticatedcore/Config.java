@@ -93,6 +93,7 @@ public class Config {
 				List<String> list = itemsEnableList.get();
 				list.add(itemRegistryName + "|true");
 				itemsEnableList.set(list);
+				COMMON_SPEC.save();
 			}
 
 			private void loadEnabledMap() {
