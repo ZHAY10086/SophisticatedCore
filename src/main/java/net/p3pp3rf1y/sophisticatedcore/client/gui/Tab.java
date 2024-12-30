@@ -116,4 +116,8 @@ public abstract class Tab extends CompositeWidgetBase<WidgetBase> {
 	public void updateNarration(NarrationElementOutput pNarrationElementOutput) {
 		//noop
 	}
+
+	public void tick() {
+		//noop
+	}
 }
