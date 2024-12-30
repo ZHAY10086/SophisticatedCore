@@ -1110,6 +1110,12 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 		return getGuiLeft();
 	}
 
+	@Override
+	protected void containerTick() {
+		super.containerTick();
+		settingsTabControl.tick();
+	}
+
 	private class TransferButton extends Button {
 		private final ButtonDefinition shiftDefinition;
 		private final ButtonDefinition definition;
