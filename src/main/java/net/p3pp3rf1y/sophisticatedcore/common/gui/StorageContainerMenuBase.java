@@ -16,6 +16,7 @@ import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
 import net.minecraftforge.items.SlotItemHandler;
 import net.p3pp3rf1y.sophisticatedcore.SophisticatedCore;
@@ -773,10 +774,10 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 	protected abstract boolean storageItemHasChanged();
 
 	@SuppressWarnings("unchecked") // both conditions of T are checked before casting it in the result
-	public <T extends UpgradeContainerBase<?, ?> & ICraftingContainer> Optional<T> getOpenOrFirstCraftingContainer() {
+	public <T extends UpgradeContainerBase<?, ?> & ICraftingContainer> Optional<T> getOpenOrFirstCraftingContainer(RecipeType<?> recipeType) {
 		T firstContainer = null;
 		for (UpgradeContainerBase<?, ?> container : upgradeContainers.values()) {
-			if (container instanceof ICraftingContainer) {
+			if (container instanceof ICraftingContainer craftingContainer && craftingContainer.getRecipeType() == recipeType) {
 				if (container.isOpen()) {
 					return Optional.of((T) container);
 				} else if (firstContainer == null) {

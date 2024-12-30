@@ -3,7 +3,9 @@ package net.p3pp3rf1y.sophisticatedcore.compat.jei;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -13,14 +15,16 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public class TransferRecipeMessage {
+	private final ResourceLocation recipeTypeId;
 	private final Map<Integer, Integer> matchingItems;
 	private final List<Integer> craftingSlotIndexes;
 	private final List<Integer> inventorySlotIndexes;
 	private final boolean maxTransfer;
 	private final ResourceLocation recipeId;
 
-	public TransferRecipeMessage(ResourceLocation recipeId, Map<Integer, Integer> matchingItems, List<Integer> craftingSlotIndexes, List<Integer> inventorySlotIndexes, boolean maxTransfer) {
+	public TransferRecipeMessage(ResourceLocation recipeId, ResourceLocation recipeTypeId, Map<Integer, Integer> matchingItems, List<Integer> craftingSlotIndexes, List<Integer> inventorySlotIndexes, boolean maxTransfer) {
 		this.recipeId = recipeId;
+		this.recipeTypeId = recipeTypeId;
 		this.matchingItems = matchingItems;
 		this.craftingSlotIndexes = craftingSlotIndexes;
 		this.inventorySlotIndexes = inventorySlotIndexes;
@@ -29,6 +33,7 @@ public class TransferRecipeMessage {
 
 	public static void encode(TransferRecipeMessage msg, FriendlyByteBuf packetBuffer) {
 		packetBuffer.writeResourceLocation(msg.recipeId);
+		packetBuffer.writeResourceLocation(msg.recipeTypeId);
 		writeMap(packetBuffer, msg.matchingItems);
 		writeList(packetBuffer, msg.craftingSlotIndexes);
 		writeList(packetBuffer, msg.inventorySlotIndexes);
@@ -49,7 +54,7 @@ public class TransferRecipeMessage {
 	}
 
 	public static TransferRecipeMessage decode(FriendlyByteBuf packetBuffer) {
-		return new TransferRecipeMessage(packetBuffer.readResourceLocation(), readMap(packetBuffer), readList(packetBuffer), readList(packetBuffer), packetBuffer.readBoolean());
+		return new TransferRecipeMessage(packetBuffer.readResourceLocation(), packetBuffer.readResourceLocation(), readMap(packetBuffer), readList(packetBuffer), readList(packetBuffer), packetBuffer.readBoolean());
 	}
 
 	private static Map<Integer, Integer> readMap(FriendlyByteBuf packetBuffer) {
@@ -80,6 +85,11 @@ public class TransferRecipeMessage {
 		if (sender == null) {
 			return;
 		}
-		CraftingContainerRecipeTransferHandlerServer.setItems(sender, msg.recipeId, msg.matchingItems, msg.craftingSlotIndexes, msg.inventorySlotIndexes, msg.maxTransfer);
+
+		RecipeType<?> recipeType = ForgeRegistries.RECIPE_TYPES.getValue(msg.recipeTypeId);
+		if (recipeType == null) {
+			return;
+		}
+		CraftingContainerRecipeTransferHandlerServer.setItems(sender, msg.recipeId, recipeType, msg.matchingItems, msg.craftingSlotIndexes, msg.inventorySlotIndexes, msg.maxTransfer);
 	}
 }
