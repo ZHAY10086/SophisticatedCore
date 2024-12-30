@@ -266,6 +266,11 @@ public class CraftingUpgradeContainer extends UpgradeContainerBase<CraftingUpgra
 				});
 	}
 
+	@Override
+	public RecipeType<?> getRecipeType() {
+		return RecipeType.CRAFTING;
+	}
+
 	public boolean shouldShiftClickIntoStorage() {
 		return upgradeWrapper.shouldShiftClickIntoStorage();
 	}
