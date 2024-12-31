@@ -1,7 +1,7 @@
 package net.p3pp3rf1y.sophisticatedcore.upgrades.battery;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -146,7 +146,7 @@ public class BatteryUpgradeWrapper extends UpgradeWrapperBase<BatteryUpgradeWrap
 	}
 
 	@Override
-	public void tick(@Nullable LivingEntity entity, Level world, BlockPos pos) {
+	public void tick(@Nullable Entity entity, Level world, BlockPos pos) {
 		if (energyStored < getMaxEnergyStored()) {
 			inventory.getStackInSlot(INPUT_SLOT).getCapability(ForgeCapabilities.ENERGY).ifPresent(this::receiveFromStorage);
 		}

@@ -7,7 +7,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ExperienceOrb;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -19,11 +18,7 @@ import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.init.ModFluids;
 import net.p3pp3rf1y.sophisticatedcore.inventory.IItemHandlerSimpleInserter;
 import net.p3pp3rf1y.sophisticatedcore.settings.memory.MemorySettingsCategory;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.ContentsFilterLogic;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.IContentsFilteredUpgrade;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.IPickupResponseUpgrade;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.ITickableUpgrade;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeWrapperBase;
+import net.p3pp3rf1y.sophisticatedcore.upgrades.*;
 import net.p3pp3rf1y.sophisticatedcore.util.NBTHelper;
 import net.p3pp3rf1y.sophisticatedcore.util.XpHelper;
 
@@ -69,7 +64,7 @@ public class MagnetUpgradeWrapper extends UpgradeWrapperBase<MagnetUpgradeWrappe
 	}
 
 	@Override
-	public void tick(@Nullable LivingEntity entity, Level world, BlockPos pos) {
+	public void tick(@Nullable Entity entity, Level world, BlockPos pos) {
 		if (isInCooldown(world)) {
 			return;
 		}
@@ -87,7 +82,7 @@ public class MagnetUpgradeWrapper extends UpgradeWrapperBase<MagnetUpgradeWrappe
 		return storageWrapper.getFluidHandler().map(fluidHandler -> fluidHandler.fill(ModFluids.EXPERIENCE_TAG, 1, ModFluids.XP_STILL.get(), IFluidHandler.FluidAction.SIMULATE) > 0).orElse(false);
 	}
 
-	private int pickupXpOrbs(@Nullable LivingEntity entity, Level world, BlockPos pos) {
+	private int pickupXpOrbs(@Nullable Entity entity, Level world, BlockPos pos) {
 		List<ExperienceOrb> xpEntities = world.getEntitiesOfClass(ExperienceOrb.class, new AABB(pos).inflate(upgradeItem.getRadius()), e -> true);
 		if (xpEntities.isEmpty()) {
 			return COOLDOWN_TICKS;
@@ -103,7 +98,7 @@ public class MagnetUpgradeWrapper extends UpgradeWrapperBase<MagnetUpgradeWrappe
 		return cooldown;
 	}
 
-	private boolean tryToFillTank(ExperienceOrb xpOrb, @Nullable LivingEntity entity, Level world) {
+	private boolean tryToFillTank(ExperienceOrb xpOrb, @Nullable Entity entity, Level world) {
 		int amountToTransfer = XpHelper.experienceToLiquid(xpOrb.getValue());
 
 		return storageWrapper.getFluidHandler().map(fluidHandler -> {
@@ -129,7 +124,7 @@ public class MagnetUpgradeWrapper extends UpgradeWrapperBase<MagnetUpgradeWrappe
 		}).orElse(false);
 	}
 
-	private int pickupItems(@Nullable LivingEntity entity, Level world, BlockPos pos) {
+	private int pickupItems(@Nullable Entity entity, Level world, BlockPos pos) {
 		List<ItemEntity> itemEntities = world.getEntities(EntityType.ITEM, new AABB(pos).inflate(upgradeItem.getRadius()), e -> true);
 		if (itemEntities.isEmpty()) {
 			return COOLDOWN_TICKS;
@@ -173,13 +168,13 @@ public class MagnetUpgradeWrapper extends UpgradeWrapperBase<MagnetUpgradeWrappe
 		return false;
 	}
 
-	private boolean canNotPickup(Entity entity, @Nullable LivingEntity player) {
-		if (isBlockedBySomething(entity)) {
+	private boolean canNotPickup(Entity pickedUpEntity, @Nullable Entity entity) {
+		if (isBlockedBySomething(pickedUpEntity)) {
 			return true;
 		}
 
-		CompoundTag data = entity.getPersistentData();
-		return player != null ? data.contains(PREVENT_REMOTE_MOVEMENT) : data.contains(PREVENT_REMOTE_MOVEMENT) && !data.contains(ALLOW_MACHINE_MOVEMENT);
+		CompoundTag data = pickedUpEntity.getPersistentData();
+		return entity != null ? data.contains(PREVENT_REMOTE_MOVEMENT) : data.contains(PREVENT_REMOTE_MOVEMENT) && !data.contains(ALLOW_MACHINE_MOVEMENT);
 	}
 
 	private boolean tryToInsertItem(ItemEntity itemEntity) {

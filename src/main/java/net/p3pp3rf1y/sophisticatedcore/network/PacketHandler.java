@@ -28,7 +28,7 @@ public class PacketHandler {
 	private final SimpleChannel networkWrapper;
 	private int idx = 0;
 
-	public PacketHandler(String modId) {
+	protected PacketHandler(String modId) {
 		networkWrapper = NetworkRegistry.newSimpleChannel(new ResourceLocation(modId, "channel"),
 				() -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 	}

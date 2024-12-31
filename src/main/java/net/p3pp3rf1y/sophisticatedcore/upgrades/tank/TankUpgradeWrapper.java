@@ -2,7 +2,7 @@ package net.p3pp3rf1y.sophisticatedcore.upgrades.tank;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -178,7 +178,7 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 	}
 
 	@Override
-	public void tick(@Nullable LivingEntity entity, Level world, BlockPos pos) {
+	public void tick(@Nullable Entity entity, Level world, BlockPos pos) {
 		if (world.getGameTime() < cooldownTime) {
 			return;
 		}
