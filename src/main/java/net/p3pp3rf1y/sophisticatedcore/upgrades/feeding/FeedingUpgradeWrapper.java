@@ -87,8 +87,6 @@ public class FeedingUpgradeWrapper extends UpgradeWrapperBase<FeedingUpgradeWrap
 			singleItemCopy.setCount(1);
 
 			if (singleItemCopy.use(level, player, InteractionHand.MAIN_HAND).getResult() == InteractionResult.CONSUME) {
-				player.getInventory().items.set(player.getInventory().selected, mainHandItem);
-
 				stack.shrink(1);
 				inventory.setStackInSlot(slot, stack);
 
@@ -100,6 +98,8 @@ public class FeedingUpgradeWrapper extends UpgradeWrapperBase<FeedingUpgradeWrap
 								InventoryHelper.insertOrDropItem(player, insertResult, playerInventory));
 					}
 				}
+
+				player.getInventory().items.set(player.getInventory().selected, mainHandItem);
 				return true;
 			}
 			player.getInventory().items.set(player.getInventory().selected, mainHandItem);
