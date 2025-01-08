@@ -177,6 +177,8 @@ public class JukeboxUpgradeWrapper extends UpgradeWrapperBase<JukeboxUpgradeWrap
 		setIsPlaying(false);
 		upgrade.remove(ModCoreDataComponents.DISC_FINISH_TIME);
 		setDiscSlotActive(-1);
+		playlist.clear();
+		history.clear();
 	}
 
 	public IItemHandler getDiscInventory() {

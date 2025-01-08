@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
@@ -66,7 +67,18 @@ public class StorageSoundHandler {
 			stopStorageSound(storageUuid);
 			return;
 		}
-		playStorageSound(storageUuid, new EntityBoundSoundInstance(soundEvent, SoundSource.RECORDS, 2, 1, entity, level.random.nextLong()));
+		playStorageSound(storageUuid, new EntityBoundSoundInstance(soundEvent, SoundSource.RECORDS, 2, 1, entity, level.random.nextLong()){
+			@Override
+			public void tick() {
+				super.tick();
+				if (entity instanceof Player player) {
+					Vec3 lookAngle = player.getLookAngle();
+					this.x = player.getX() + lookAngle.x;
+					this.y = player.getEyeY() + lookAngle.y;
+					this.z = player.getZ() + lookAngle.z;
+				}
+			}
+		});
 	}
 
 	@SuppressWarnings({"unused", "java:S1172"}) // needs to be here for addListener to recognize which event this method should be subscribed to
