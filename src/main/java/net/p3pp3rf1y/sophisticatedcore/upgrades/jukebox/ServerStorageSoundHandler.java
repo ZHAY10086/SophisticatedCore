@@ -56,17 +56,17 @@ public class ServerStorageSoundHandler {
 		}
 	}
 
-	public static void onSoundStopped(ServerLevel world, UUID storageUuid) {
-		removeKeepAliveInfo(world, storageUuid);
+	public static void onSoundFinished(ServerLevel level, UUID storageUuid) {
+		removeKeepAliveInfo(level, storageUuid, true);
 	}
 
 	private static class KeepAliveInfo {
-		private final WeakReference<Runnable> onStopHandler;
+		private final WeakReference<Runnable> onFinishedHandler;
 		private long lastKeepAliveTime;
 		private Vec3 lastPosition;
 
-		private KeepAliveInfo(Runnable onStopHandler, long lastKeepAliveTime, Vec3 lastPosition) {
-			this.onStopHandler = new WeakReference<>(onStopHandler);
+		private KeepAliveInfo(Runnable onFinishedHandler, long lastKeepAliveTime, Vec3 lastPosition) {
+			this.onFinishedHandler = new WeakReference<>(onFinishedHandler);
 			this.lastKeepAliveTime = lastKeepAliveTime;
 			this.lastPosition = lastPosition;
 		}
@@ -84,38 +84,41 @@ public class ServerStorageSoundHandler {
 			lastPosition = position;
 		}
 
-		public void runOnStop() {
-			Runnable handler = onStopHandler.get();
+		public void runOnFinished() {
+			Runnable handler = onFinishedHandler.get();
 			if (handler != null) {
 				handler.run();
 			}
 		}
 	}
 
-	public static void startPlayingDisc(ServerLevel serverWorld, BlockPos position, UUID storageUuid, int discItemId, Runnable onStopHandler) {
+	public static void startPlayingDisc(ServerLevel serverWorld, BlockPos position, UUID storageUuid, int discItemId, Runnable onFinishedHandler) {
 		Vec3 pos = Vec3.atCenterOf(position);
 		PacketHandler.INSTANCE.sendToAllNear(serverWorld, serverWorld.dimension(), pos, 128, new PlayDiscMessage(storageUuid, discItemId, position));
-		putKeepAliveInfo(serverWorld, storageUuid, onStopHandler, pos);
+		putKeepAliveInfo(serverWorld, storageUuid, onFinishedHandler, pos);
 	}
 
-	public static void startPlayingDisc(ServerLevel serverWorld, Vec3 position, UUID storageUuid, int entityId, int discItemId, Runnable onStopHandler) {
+	public static void startPlayingDisc(ServerLevel serverWorld, Vec3 position, UUID storageUuid, int entityId, int discItemId, Runnable onFinishedHandler) {
 		PacketHandler.INSTANCE.sendToAllNear(serverWorld, serverWorld.dimension(), position, 128, new PlayDiscMessage(storageUuid, discItemId, entityId));
-		putKeepAliveInfo(serverWorld, storageUuid, onStopHandler, position);
+		putKeepAliveInfo(serverWorld, storageUuid, onFinishedHandler, position);
 	}
 
-	private static void putKeepAliveInfo(ServerLevel serverWorld, UUID storageUuid, Runnable onStopHandler, Vec3 pos) {
-		worldStorageSoundKeepAlive.computeIfAbsent(serverWorld.dimension(), dim -> new HashMap<>()).put(storageUuid, new KeepAliveInfo(onStopHandler, serverWorld.getGameTime(), pos));
+	private static void putKeepAliveInfo(ServerLevel serverWorld, UUID storageUuid, Runnable onFinishedHandler, Vec3 pos) {
+		worldStorageSoundKeepAlive.computeIfAbsent(serverWorld.dimension(), dim -> new HashMap<>()).put(storageUuid, new KeepAliveInfo(onFinishedHandler, serverWorld.getGameTime(), pos));
 	}
 
 	public static void stopPlayingDisc(ServerLevel serverWorld, Vec3 position, UUID storageUuid) {
-		removeKeepAliveInfo(serverWorld, storageUuid);
+		removeKeepAliveInfo(serverWorld, storageUuid, false);
 		sendStopMessage(serverWorld, position, storageUuid);
 	}
 
-	private static void removeKeepAliveInfo(ServerLevel serverWorld, UUID storageUuid) {
+	private static void removeKeepAliveInfo(ServerLevel serverWorld, UUID storageUuid, boolean finished) {
 		ResourceKey<Level> dim = serverWorld.dimension();
 		if (worldStorageSoundKeepAlive.containsKey(dim) && worldStorageSoundKeepAlive.get(dim).containsKey(storageUuid)) {
-			worldStorageSoundKeepAlive.get(dim).remove(storageUuid).runOnStop();
+			KeepAliveInfo keepAliveInfo = worldStorageSoundKeepAlive.get(dim).remove(storageUuid);
+			if (finished) {
+				keepAliveInfo.runOnFinished();
+			}
 		}
 	}
 

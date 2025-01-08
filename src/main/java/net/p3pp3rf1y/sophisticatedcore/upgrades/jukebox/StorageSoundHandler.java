@@ -9,7 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.LevelEvent;
@@ -36,7 +36,6 @@ public class StorageSoundHandler {
 	public static void stopStorageSound(UUID storageUuid) {
 		if (storageSounds.containsKey(storageUuid)) {
 			Minecraft.getInstance().getSoundManager().stop(storageSounds.remove(storageUuid));
-			PacketHandler.INSTANCE.sendToServer(new SoundStopNotificationMessage(storageUuid));
 		}
 	}
 
@@ -45,7 +44,7 @@ public class StorageSoundHandler {
 			lastPlaybackChecked = event.level.getGameTime();
 			storageSounds.entrySet().removeIf(entry -> {
 				if (!Minecraft.getInstance().getSoundManager().isActive(entry.getValue())) {
-					PacketHandler.INSTANCE.sendToServer(new SoundStopNotificationMessage(entry.getKey()));
+					PacketHandler.INSTANCE.sendToServer(new SoundFinishedNotificationMessage(entry.getKey()));
 					return true;
 				}
 				return false;
@@ -64,10 +63,14 @@ public class StorageSoundHandler {
 		}
 
 		Entity entity = level.getEntity(entityId);
-		if (!(entity instanceof LivingEntity)) {
+		if (entity == null) {
 			return;
 		}
-		playStorageSound(storageUuid, new EntityBoundSoundInstance(soundEvent, SoundSource.RECORDS, 2, 1, entity, level.random.nextLong()));
+		playStorageSound(storageUuid, new EntityBoundSoundInstance(soundEvent, SoundSource.RECORDS, 2, 1, entity, level.random.nextLong()) {{
+			if (entity instanceof Player player) {
+				this.y = player.getEyeY();
+			}
+		}});
 	}
 
 	@SuppressWarnings({"unused", "java:S1172"}) // needs to be here for addListener to recognize which event this method should be subscribed to
