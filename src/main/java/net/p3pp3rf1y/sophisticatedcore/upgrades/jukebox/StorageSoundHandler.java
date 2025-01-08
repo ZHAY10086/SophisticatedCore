@@ -66,11 +66,18 @@ public class StorageSoundHandler {
 		if (entity == null) {
 			return;
 		}
-		playStorageSound(storageUuid, new EntityBoundSoundInstance(soundEvent, SoundSource.RECORDS, 2, 1, entity, level.random.nextLong()) {{
-			if (entity instanceof Player player) {
-				this.y = player.getEyeY();
+		playStorageSound(storageUuid, new EntityBoundSoundInstance(soundEvent, SoundSource.RECORDS, 2, 1, entity, level.random.nextLong()) {
+			@Override
+			public void tick() {
+				super.tick();
+				if (entity instanceof Player player) {
+					Vec3 lookAngle = player.getLookAngle();
+					this.x = player.getX() + lookAngle.x;
+					this.y = player.getEyeY() + lookAngle.y;
+					this.z = player.getZ() + lookAngle.z;
+				}
 			}
-		}});
+		});
 	}
 
 	@SuppressWarnings({"unused", "java:S1172"}) // needs to be here for addListener to recognize which event this method should be subscribed to
