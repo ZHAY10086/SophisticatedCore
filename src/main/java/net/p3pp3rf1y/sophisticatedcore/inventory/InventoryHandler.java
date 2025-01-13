@@ -231,7 +231,12 @@ public abstract class InventoryHandler extends ItemStackHandler implements ITrac
 			return ItemStack.EMPTY;
 		}
 
+/*
+		!!! This issue of not following API definition that says extracted stack must be capped at maxStackSize was introduced to fix dupe bug in Refined Storage they are not fixing, hopefully it doesn't break something else !!!
+		!!! THIS IS NOT SUPPOSED TO MAKE IT INTO ANY OTHER VERSION THAN 1.20 !!!
 		int toExtract = Math.min(amount, existing.getMaxStackSize());
+*/
+		int toExtract = amount;
 
 		if (existing.getCount() <= toExtract) {
 			if (!simulate) {
