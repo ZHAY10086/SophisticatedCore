@@ -188,6 +188,7 @@ public abstract class RenderInfo {
 		getRenderInfoTag().ifPresent(renderInfoTag -> {
 			renderInfoTag.remove(TANKS_TAG);
 			renderInfoTag.remove(BATTERY_TAG);
+			serializeRenderInfo(renderInfoTag);
 		});
 		save(triggerChangeListener);
 	}
