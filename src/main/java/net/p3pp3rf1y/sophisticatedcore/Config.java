@@ -1,6 +1,5 @@
 package net.p3pp3rf1y.sophisticatedcore;
 
-import com.electronwill.nightconfig.core.io.WritingException;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -94,11 +93,7 @@ public class Config {
 				List<String> list = itemsEnableList.get();
 				list.add(itemRegistryName + "|true");
 				itemsEnableList.set(list);
-				try {
-					COMMON_SPEC.save();
-				} catch (WritingException e) {
-					SophisticatedCore.LOGGER.warn("Failed to save common config", e);
-				}
+				itemsEnableList.save();
 			}
 
 			private void loadEnabledMap() {
@@ -112,6 +107,5 @@ public class Config {
 				}
 			}
 		}
-
 	}
 }
