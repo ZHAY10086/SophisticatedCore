@@ -57,6 +57,7 @@ public class SophisticatedCore {
 		if (world != null) {
 			RecipeHelper.setLevel(world);
 			StorageWrapperRepository.clearCache();
+			Config.COMMON.saveIfChanged();
 		}
 	}
 
