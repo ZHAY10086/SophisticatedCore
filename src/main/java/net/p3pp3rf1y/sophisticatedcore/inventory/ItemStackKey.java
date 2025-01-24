@@ -3,7 +3,6 @@ package net.p3pp3rf1y.sophisticatedcore.inventory;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
 import net.p3pp3rf1y.sophisticatedcore.SophisticatedCore;
 
 import javax.annotation.Nullable;
@@ -13,7 +12,18 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ItemStackKey {
-	private static final Field CAP_NBT = ObfuscationReflectionHelper.findField(ItemStack.class, "capNBT");
+	private static final Field CAP_NBT = findCapNBTField();
+
+	private static Field findCapNBTField() {
+		try {
+			Field f = ItemStack.class.getDeclaredField("capNBT");
+			f.setAccessible(true);
+			return f;
+		} catch (NoSuchFieldException e) {
+			throw new IllegalArgumentException("Unable to findField capNBT", e);
+		}
+	}
+
 	private final ItemStack stack;
 
 	private static final Map<ItemStack, ItemStackKey> CACHE = new ConcurrentHashMap<>();
