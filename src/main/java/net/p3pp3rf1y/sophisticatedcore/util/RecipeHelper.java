@@ -121,7 +121,7 @@ public class RecipeHelper {
 	private static boolean isPartOfCompactingLoop(ItemStack firstCompacted, ItemStack firstCompactResult, Level w) {
 		ItemStack compactingResultStack;
 		int iterations = 0;
-		Set<ItemStack> compactedItems = new HashSet<>();
+		Set<Integer> compactedItemHashes = new HashSet<>();
 		Queue<ItemStack> itemsToCompact = new LinkedList<>();
 		itemsToCompact.add(firstCompactResult);
 		while (!itemsToCompact.isEmpty()) {
@@ -130,7 +130,7 @@ public class RecipeHelper {
 			if (!compactingResultStack.isEmpty()) {
 				if (ItemStack.isSameItemSameComponents(compactingResultStack, firstCompacted)) {
 					return true;
-				} else if (compactedItems.contains(compactingResultStack.getItem())) {
+				} else if (compactedItemHashes.contains(ItemStack.hashItemAndComponents(compactingResultStack))) {
 					return false; //loop exists but the first compacted item isn't part of it so we will let it be compacted, but no follow up compacting will happen
 				}
 				itemsToCompact.add(compactingResultStack);
@@ -140,12 +140,12 @@ public class RecipeHelper {
 			if (!compactingResultStack.isEmpty()) {
 				if (ItemStack.isSameItemSameComponents(compactingResultStack, firstCompacted)) {
 					return true;
-				} else if (compactedItems.contains(compactingResultStack.getItem())) {
+				} else if (compactedItemHashes.contains(ItemStack.hashItemAndComponents(compactingResultStack))) {
 					return false; //loop exists but the first compacted item isn't part of it so we will let it be compacted, but no follow up compacting will happen
 				}
 				itemsToCompact.add(compactingResultStack);
 			}
-			compactedItems.add(itemToCompact);
+			compactedItemHashes.add(ItemStack.hashItemAndComponents(itemToCompact));
 			iterations++;
 			if (iterations > MAX_FOLLOW_UP_COMPACTING_RECIPES) {
 				return true; //we were unable to figure out if the loop exists because of way too many follow up compacting recipe thus not allowing to compact anyway

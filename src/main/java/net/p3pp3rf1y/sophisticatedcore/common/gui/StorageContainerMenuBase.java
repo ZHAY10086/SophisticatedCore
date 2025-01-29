@@ -82,6 +82,7 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 	private boolean inventorySlotStackChanged = false;
 	private final Set<Integer> inaccessibleSlots = new HashSet<>();
 	private final Map<Integer, Integer> slotLimitOverrides = new HashMap<>();
+	private final Set<Integer> infiniteSlots = new HashSet<>();
 	private final Map<Integer, ItemStack> slotFilterItems = new HashMap<>();
 	private final Map<Integer, Pair<ResourceLocation, ResourceLocation>> emptySlotIcons = new HashMap<>();
 
@@ -223,7 +224,7 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 		Set<Integer> noSortSlotIndexes = getNoSortSlotIndexes();
 		while (slotIndex < inventoryHandler.getSlots()) {
 			int finalSlotIndex = slotIndex;
-			StorageInventorySlot slot = new StorageInventorySlot(player.level().isClientSide, storageWrapper, finalSlotIndex) {
+			StorageInventorySlot slot = new StorageInventorySlot(player.level().isClientSide, storageWrapper, finalSlotIndex, player) {
 				@Override
 				public void set(@Nonnull ItemStack stack) {
 					super.set(stack);
@@ -868,6 +869,10 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 		sendAdditionalSlotInfo();
 	}
 
+	public boolean isInfiniteSlot(int slot) {
+		return infiniteSlots.contains(slot);
+	}
+
 	private void sendEmptySlotIcons() {
 		if (!(player instanceof ServerPlayer serverPlayer)) {
 			return;
@@ -888,11 +893,15 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 		}
 		Set<Integer> inaccessibleSlots = new HashSet<>();
 		Map<Integer, Integer> slotLimitOverrides = new HashMap<>();
+		Set<Integer> infiniteSlots = new HashSet<>();
 		InventoryHandler inventoryHandler = storageWrapper.getInventoryHandler();
 		Map<Integer, Holder<Item>> slotFilterItems = new HashMap<>();
 		for (int slot = 0; slot < inventoryHandler.getSlots(); slot++) {
 			if (!inventoryHandler.isSlotAccessible(slot)) {
 				inaccessibleSlots.add(slot);
+			}
+			if (inventoryHandler.isInfinite(slot)) {
+				infiniteSlots.add(slot);
 			}
 			ItemStack stackInSlot = inventoryHandler.getStackInSlot(slot);
 			int stackLimit = inventoryHandler.getStackLimit(slot, stackInSlot);
@@ -903,7 +912,7 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 				slotFilterItems.put(slot, inventoryHandler.getFilterItem(slot).builtInRegistryHolder());
 			}
 		}
-		PacketDistributor.sendToPlayer(serverPlayer, new SyncAdditionalSlotInfoPayload(inaccessibleSlots, slotLimitOverrides, slotFilterItems));
+		PacketDistributor.sendToPlayer(serverPlayer, new SyncAdditionalSlotInfoPayload(inaccessibleSlots, slotLimitOverrides, infiniteSlots, slotFilterItems));
 	}
 
 	@Override
@@ -921,7 +930,7 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 			ItemStack previous = remoteRealSlots.get(slotIndex);
 			remoteRealSlots.set(slotIndex, stack);
 
-			if (previous.isEmpty() || stack.isEmpty()) {
+			if (isStorageInventorySlot(slotIndex) && (previous.isEmpty() || stack.isEmpty())) {
 				inventorySlotStackChanged = true;
 			}
 		} else {
@@ -1092,8 +1101,12 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 						}
 					} else if (slot7.mayPickup(player)) {
 						if (carriedStack.isEmpty()) {
-							int i3 = clickaction == ClickAction.PRIMARY ? Math.min(slotStack.getCount(), slotStack.getMaxStackSize()) : Math.min(slotStack.getMaxStackSize() + 1, slotStack.getCount() + 1) / 2;
-							Optional<ItemStack> optional1 = slot7.tryRemove(i3, Integer.MAX_VALUE, player);
+							int countToRemove;
+							countToRemove = Math.min(slotStack.getCount(), slotStack.getMaxStackSize());
+							if (clickaction == ClickAction.SECONDARY) {
+								countToRemove = countToRemove / 2 + countToRemove % 2;
+							}
+							Optional<ItemStack> optional1 = slot7.tryRemove(countToRemove, Integer.MAX_VALUE, player);
 							optional1.ifPresent((p_150421_) -> {
 								setCarried(p_150421_);
 								slot7.onTake(player, p_150421_);
@@ -1498,7 +1511,7 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 			if (!ItemStack.matches(remoteStack, slotStack)) {
 				ItemStack stackCopy = slotStackCopy.get();
 				remoteSlotsCollection.set(slotIndex, stackCopy);
-				if (isStorageInventorySlot(slotIndex) && (remoteStack.isEmpty() || slotStack.isEmpty())) {
+				if (isStorageInventorySlot(slotIndex + slotIndexOffset) && (remoteStack.isEmpty() || slotStack.isEmpty())) {
 					inventorySlotStackChanged = true;
 				}
 				if (synchronizer != null) {
@@ -1591,12 +1604,32 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 	}
 
 	@Override
-	public void updateAdditionalSlotInfo(Set<Integer> inaccessibleSlots, Map<Integer, Integer> slotLimitOverrides, Map<Integer, Holder<Item>> slotFilterItems) {
+	public void updateAdditionalSlotInfo(Set<Integer> inaccessibleSlots, Map<Integer, Integer> slotLimitOverrides, Set<Integer> infiniteSlots, Map<Integer, Holder<Item>> slotFilterItems) {
 		this.inaccessibleSlots.clear();
 		this.inaccessibleSlots.addAll(inaccessibleSlots);
 
 		this.slotLimitOverrides.clear();
 		this.slotLimitOverrides.putAll(slotLimitOverrides);
+
+		this.infiniteSlots.clear();
+		this.infiniteSlots.addAll(infiniteSlots);
+
+		Set<Integer> noSort = getNoSortSlotIndexes();
+		noSort.addAll(infiniteSlots);
+
+		List<Slot> slotsToMakeIntoNoSort = new ArrayList<>();
+		List<Slot> slotsToMakeSortable = new ArrayList<>();
+		for (int i = 0; i < getNumberOfStorageInventorySlots(); i++) {
+			Slot slot = realInventorySlots.get(i);
+			if (noSort.contains(slot.index) && slots.contains(slot)) {
+				slotsToMakeIntoNoSort.add(slot);
+			} else if (!noSort.contains(slot.index) && !slots.contains(slot)) {
+				slotsToMakeSortable.add(slot);
+			}
+		}
+
+		slotsToMakeIntoNoSort.forEach(slots::remove);
+		slots.addAll(slotsToMakeSortable);
 
 		this.slotFilterItems.clear();
 		slotFilterItems.forEach((slot, item) -> this.slotFilterItems.put(slot, new ItemStack(item)));
@@ -1695,7 +1728,7 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 				return false;
 			}
 
-			UpgradeSlotChangeResult result = ((IUpgradeItem<?>) getItem().getItem()).canRemoveUpgradeFrom(storageWrapper, player.level().isClientSide());
+			UpgradeSlotChangeResult result = ((IUpgradeItem<?>) getItem().getItem()).canRemoveUpgradeFrom(storageWrapper, player.level().isClientSide(), player);
 			updateSlotChangeError(result);
 			return result.successful();
 		}
