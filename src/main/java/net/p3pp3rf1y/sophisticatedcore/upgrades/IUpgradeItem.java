@@ -1,6 +1,7 @@
 package net.p3pp3rf1y.sophisticatedcore.upgrades;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
@@ -13,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 public interface IUpgradeItem<T extends IUpgradeWrapper> {
@@ -30,7 +32,27 @@ public interface IUpgradeItem<T extends IUpgradeWrapper> {
 			return result;
 		}
 
+		result = checkThisForConflictsWithExistingUpgrades(upgradeStack, storageWrapper, -1);
+		if (!result.isSuccessful()) {
+			return result;
+		}
+
 		return checkExtraInsertConditions(upgradeStack, storageWrapper, isClientSide, null);
+	}
+
+	default UpgradeSlotChangeResult checkThisForConflictsWithExistingUpgrades(ItemStack upgradeStack, IStorageWrapper storageWrapper, int excludeUpgradeSlot) {
+		AtomicReference<UpgradeSlotChangeResult> result = new AtomicReference<>(new UpgradeSlotChangeResult.Success());
+		InventoryHelper.iterate(storageWrapper.getUpgradeHandler(), (slot, stack) -> {
+			if (slot != excludeUpgradeSlot && stack.getItem() instanceof IUpgradeItem<?> upgradeItem) {
+				for (UpgradeConflictDefinition conflictDefinition : upgradeItem.getUpgradeConflicts()) {
+					if (conflictDefinition.isConflictingItem.test(upgradeStack.getItem())) {
+						result.set(new UpgradeSlotChangeResult.Fail(conflictDefinition.otherBeingAddedErrorMessage, Set.of(slot), Set.of(), Set.of()));
+						return;
+					}
+				}
+			}
+		}, () -> !result.get().isSuccessful());
+		return result.get();
 	}
 
 	private UpgradeSlotChangeResult checkForConflictingUpgrades(IStorageWrapper storageWrapper, List<UpgradeConflictDefinition> upgradeConflicts, int excludeUpgradeSlot) {
@@ -38,7 +60,7 @@ public interface IUpgradeItem<T extends IUpgradeWrapper> {
 			AtomicInteger conflictingCount = new AtomicInteger(0);
 			Set<Integer> conflictingSlots = new HashSet<>();
 			InventoryHelper.iterate(storageWrapper.getUpgradeHandler(), (slot, stack) -> {
-				if (slot != excludeUpgradeSlot && conflictDefinition.isConflictingItem.test(stack.getItem())) {
+				if (slot != excludeUpgradeSlot && !stack.isEmpty() && conflictDefinition.isConflictingItem.test(stack.getItem())) {
 					conflictingCount.incrementAndGet();
 					conflictingSlots.add(slot);
 				}
@@ -90,6 +112,10 @@ public interface IUpgradeItem<T extends IUpgradeWrapper> {
 		}
 
 		return new UpgradeSlotChangeResult.Success();
+	}
+
+	default UpgradeSlotChangeResult canRemoveUpgradeFrom(IStorageWrapper storageWrapper, boolean isClientSide, Player player) {
+		return canRemoveUpgradeFrom(storageWrapper, isClientSide);
 	}
 
 	default UpgradeSlotChangeResult canRemoveUpgradeFrom(IStorageWrapper storageWrapper, boolean isClientSide) {
@@ -151,5 +177,10 @@ public interface IUpgradeItem<T extends IUpgradeWrapper> {
 
 	Component getName();
 
-	record UpgradeConflictDefinition(Predicate<Item> isConflictingItem, int maxConflictingAllowed, Component errorMessage) {}
+	record UpgradeConflictDefinition(Predicate<Item> isConflictingItem, int maxConflictingAllowed,
+									 Component errorMessage, Component otherBeingAddedErrorMessage) {
+		public UpgradeConflictDefinition(Predicate<Item> isConflictingItem, int maxConflictingAllowed, Component errorMessage) {
+			this(isConflictingItem, maxConflictingAllowed, errorMessage, errorMessage);
+		}
+	}
 }

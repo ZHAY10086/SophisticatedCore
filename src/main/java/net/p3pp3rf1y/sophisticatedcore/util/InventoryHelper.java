@@ -20,6 +20,7 @@ import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.wrapper.EmptyHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.IItemHandlerSimpleInserter;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ITrackedContentsItemHandler;
+import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ItemStackKey;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.IPickupResponseUpgrade;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeHandler;
@@ -202,9 +203,13 @@ public class InventoryHelper {
 	}
 
 	public static void iterate(IItemHandler handler, BiConsumer<Integer, ItemStack> actOn, BooleanSupplier shouldExit) {
+		iterate(handler, actOn, shouldExit, true);
+	}
+
+	public static void iterate(IItemHandler handler, BiConsumer<Integer, ItemStack> actOn, BooleanSupplier shouldExit, boolean getVirtualCounts) {
 		int slots = handler.getSlots();
 		for (int slot = 0; slot < slots; slot++) {
-			ItemStack stack = handler.getStackInSlot(slot);
+			ItemStack stack = !getVirtualCounts && handler instanceof InventoryHandler inventoryHandler ? inventoryHandler.getSlotStack(slot) : handler.getStackInSlot(slot);
 			actOn.accept(slot, stack);
 			if (shouldExit.getAsBoolean()) {
 				break;
@@ -336,6 +341,10 @@ public class InventoryHelper {
 	}
 
 	static Map<ItemStackKey, Integer> getCompactedStacks(IItemHandler handler, Set<Integer> ignoreSlots) {
+		return getCompactedStacks(handler, ignoreSlots, true);
+	}
+
+	static Map<ItemStackKey, Integer> getCompactedStacks(IItemHandler handler, Set<Integer> ignoreSlots, boolean getVirtualCounts) {
 		Map<ItemStackKey, Integer> ret = new HashMap<>();
 		iterate(handler, (slot, stack) -> {
 			if (stack.isEmpty() || ignoreSlots.contains(slot)) {
@@ -343,7 +352,7 @@ public class InventoryHelper {
 			}
 			ItemStackKey itemStackKey = ItemStackKey.of(stack);
 			ret.put(itemStackKey, ret.computeIfAbsent(itemStackKey, fs -> 0) + stack.getCount());
-		});
+		}, () -> false, getVirtualCounts);
 		return ret;
 	}
 
@@ -426,19 +435,29 @@ public class InventoryHelper {
 	}
 
 	public static void dropItems(ItemStackHandler inventoryHandler, Level level, double x, double y, double z) {
-		iterate(inventoryHandler, (slot, stack) -> dropItem(inventoryHandler, level, x, y, z, slot, stack));
+		iterate(inventoryHandler, (slot, stack) -> dropItem(inventoryHandler, level, x, y, z, slot, stack), () -> false, false);
 	}
 
-	public static void dropItem(ItemStackHandler inventoryHandler, Level level, double x, double y, double z, Integer slot, ItemStack stack) {
+	public static void dropItem(ItemStackHandler handler, Level level, double x, double y, double z, Integer slot, ItemStack stack) {
 		if (stack.isEmpty()) {
 			return;
 		}
-		ItemStack extractedStack = inventoryHandler.extractItem(slot, stack.getMaxStackSize(), false);
-		while (!extractedStack.isEmpty()) {
-			Containers.dropItemStack(level, x, y, z, extractedStack);
-			extractedStack = inventoryHandler.extractItem(slot, stack.getMaxStackSize(), false);
+		if (handler instanceof InventoryHandler inventoryHandler) {
+			int countToExtract = stack.getCount();
+			while (countToExtract > 0) {
+				int countToDrop = Math.min(stack.getMaxStackSize(), countToExtract);
+				Containers.dropItemStack(level, x, y, z, stack.copyWithCount(countToDrop));
+				countToExtract -= countToDrop;
+			}
+			inventoryHandler.setSlotStack(slot, ItemStack.EMPTY);
+		} else {
+			ItemStack extractedStack = handler.extractItem(slot, stack.getMaxStackSize(), false);
+			while (!extractedStack.isEmpty()) {
+				Containers.dropItemStack(level, x, y, z, extractedStack);
+				extractedStack = handler.extractItem(slot, stack.getMaxStackSize(), false);
+			}
+			handler.setStackInSlot(slot, ItemStack.EMPTY);
 		}
-		inventoryHandler.setStackInSlot(slot, ItemStack.EMPTY);
 	}
 
 	public static int getAnalogOutputSignal(ITrackedContentsItemHandler handler) {

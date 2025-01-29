@@ -6,6 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.ItemHandlerHelper;
@@ -359,9 +360,14 @@ public abstract class InventoryHandler extends ItemStackHandler implements ITrac
 		this.persistent = persistent;
 	}
 
+	public boolean isItemValid(int slot, ItemStack stack, @Nullable Player player) {
+		return inventoryPartitioner.getPartBySlot(slot).isItemValid(slot, stack, player, super::isItemValid)
+				&& isAllowed(stack) && storageWrapper.getSettingsHandler().getTypeCategory(MemorySettingsCategory.class).matchesFilter(slot, stack);
+	}
+
 	@Override
 	public boolean isItemValid(int slot, ItemStack stack) {
-		return inventoryPartitioner.getPartBySlot(slot).isItemValid(slot, stack) && isAllowed(stack) && storageWrapper.getSettingsHandler().getTypeCategory(MemorySettingsCategory.class).matchesFilter(slot, stack);
+		return isItemValid(slot, stack, null);
 	}
 
 	@Nonnull
@@ -507,5 +513,9 @@ public abstract class InventoryHandler extends ItemStackHandler implements ITrac
 	public void setShouldInsertIntoEmpty(BooleanSupplier shouldInsertIntoEmpty) {
 		this.shouldInsertIntoEmpty = shouldInsertIntoEmpty;
 		slotTracker.setShouldInsertIntoEmpty(shouldInsertIntoEmpty);
+	}
+
+	public boolean isInfinite(int slot) {
+		return inventoryPartitioner.isInfinite(slot);
 	}
 }

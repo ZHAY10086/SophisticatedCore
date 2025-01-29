@@ -18,21 +18,28 @@ import java.util.stream.Collectors;
 public class SyncAdditionalSlotInfoMessage {
 	private final Set<Integer> inaccessibleSlots;
 	private final Map<Integer, Integer> slotLimitOverrides;
+	private final Set<Integer> infiniteSlots;
 	private final Map<Integer, Item> slotFilterItems;
-	public SyncAdditionalSlotInfoMessage(Set<Integer> inaccessibleSlots, Map<Integer, Integer> slotLimitOverrides, Map<Integer, Item> slotFilterItems) {
+	public SyncAdditionalSlotInfoMessage(Set<Integer> inaccessibleSlots, Map<Integer, Integer> slotLimitOverrides, Set<Integer> infiniteSlots, Map<Integer, Item> slotFilterItems) {
 		this.inaccessibleSlots = inaccessibleSlots;
 		this.slotLimitOverrides = slotLimitOverrides;
 		this.slotFilterItems = slotFilterItems;
+		this.infiniteSlots = infiniteSlots;
 	}
 
 	public static void encode(SyncAdditionalSlotInfoMessage msg, FriendlyByteBuf packetBuffer) {
 		packetBuffer.writeVarIntArray(msg.inaccessibleSlots.stream().mapToInt(i->i).toArray());
 		serializeSlotLimitOverrides(packetBuffer, msg.slotLimitOverrides);
+		packetBuffer.writeVarIntArray(msg.infiniteSlots.stream().mapToInt(i->i).toArray());
 		serializeSlotFilterItems(packetBuffer, msg.slotFilterItems);
 	}
 
 	public static SyncAdditionalSlotInfoMessage decode(FriendlyByteBuf packetBuffer) {
-		return new SyncAdditionalSlotInfoMessage(Arrays.stream(packetBuffer.readVarIntArray()).boxed().collect(Collectors.toSet()), deserializeSlotLimitOverrides(packetBuffer), deserializeSlotFilterItems(packetBuffer));
+		return new SyncAdditionalSlotInfoMessage(
+				Arrays.stream(packetBuffer.readVarIntArray()).boxed().collect(Collectors.toSet()),
+				deserializeSlotLimitOverrides(packetBuffer),
+				Arrays.stream(packetBuffer.readVarIntArray()).boxed().collect(Collectors.toSet()),
+				deserializeSlotFilterItems(packetBuffer));
 	}
 
 	private static void serializeSlotFilterItems(FriendlyByteBuf packetBuffer, Map<Integer, Item> slotFilterItems) {
@@ -85,6 +92,6 @@ public class SyncAdditionalSlotInfoMessage {
 		if (player == null || !(player.containerMenu instanceof IAdditionalSlotInfoMenu menu)) {
 			return;
 		}
-		menu.updateAdditionalSlotInfo(msg.inaccessibleSlots, msg.slotLimitOverrides, msg.slotFilterItems);
+		menu.updateAdditionalSlotInfo(msg.inaccessibleSlots, msg.slotLimitOverrides, msg.infiniteSlots, msg.slotFilterItems);
 	}
 }
