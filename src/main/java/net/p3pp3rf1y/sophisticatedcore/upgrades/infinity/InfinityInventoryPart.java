@@ -79,6 +79,10 @@ public class InfinityInventoryPart implements IInventoryPartHandler {
 
 	@Override
 	public ItemStack getStackInSlot(int slot, IntFunction<ItemStack> getStackInSlotSuper) {
+		if (cachedStacks.containsKey(slot) && cachedStacks.get(slot).isEmpty() != parent.getSlotStack(slot).isEmpty()) {
+			cachedStacks.remove(slot);
+		}
+
 		return cachedStacks.computeIfAbsent(slot, s ->  parent.getSlotStack(s).copyWithCount(Integer.MAX_VALUE));
 	}
 

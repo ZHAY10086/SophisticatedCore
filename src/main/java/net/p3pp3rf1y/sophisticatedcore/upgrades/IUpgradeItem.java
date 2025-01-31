@@ -45,7 +45,9 @@ public interface IUpgradeItem<T extends IUpgradeWrapper> {
 		InventoryHelper.iterate(storageWrapper.getUpgradeHandler(), (slot, stack) -> {
 			if (slot != excludeUpgradeSlot && stack.getItem() instanceof IUpgradeItem<?> upgradeItem) {
 				for (UpgradeConflictDefinition conflictDefinition : upgradeItem.getUpgradeConflicts()) {
-					if (conflictDefinition.isConflictingItem.test(upgradeStack.getItem())) {
+					//only checking for single item conflicts here would need to be expanded to support multiple,
+					// but there isn't a case like that at the moment because the other conflict check (the one where item inserted checks items that exist) covers all multiple item cases
+					if (conflictDefinition.maxConflictingAllowed() == 0 && conflictDefinition.isConflictingItem.test(upgradeStack.getItem())) {
 						result.set(UpgradeSlotChangeResult.fail(conflictDefinition.otherBeingAddedErrorMessage, Set.of(slot), Set.of(), Set.of()));
 						return;
 					}
