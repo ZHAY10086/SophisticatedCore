@@ -14,20 +14,16 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.IntFunction;
 
-public class InfinityInventoryPart implements IInventoryPartHandler {
-	public static final String NAME = "infinity";
+public abstract class InfinityInventoryPart implements IInventoryPartHandler {
 	private final InventoryHandler parent;
 	private final SlotRange slotRange;
+	private final int permissionLevel;
 	private final Map<Integer, ItemStack> cachedStacks = new HashMap<>();
 
-	public InfinityInventoryPart(InventoryHandler parent, SlotRange slotRange) {
+	protected InfinityInventoryPart(InventoryHandler parent, SlotRange slotRange, int permissionLevel) {
 		this.parent = parent;
 		this.slotRange = slotRange;
-	}
-
-	@Override
-	public String getName() {
-		return NAME;
+		this.permissionLevel = permissionLevel;
 	}
 
 	@Override
@@ -42,7 +38,7 @@ public class InfinityInventoryPart implements IInventoryPartHandler {
 
 	@Override
 	public boolean isItemValid(int slot, ItemStack stack, @Nullable Player player, BiPredicate<Integer, ItemStack> isItemValidSuper) {
-		return player != null && player.hasPermissions(1) && parent.getSlotStack(slot).isEmpty() && isItemValidSuper.test(slot, stack);
+		return player != null && player.hasPermissions(permissionLevel) && parent.getSlotStack(slot).isEmpty() && isItemValidSuper.test(slot, stack);
 	}
 
 	@Override
@@ -89,5 +85,31 @@ public class InfinityInventoryPart implements IInventoryPartHandler {
 	@Override
 	public int getSlots() {
 		return slotRange.numberOfSlots();
+	}
+
+	public static class Admin extends InfinityInventoryPart {
+		public static final String NAME = "infinity";
+
+		protected Admin(InventoryHandler parent, SlotRange slotRange) {
+			super(parent, slotRange, 2);
+		}
+
+		@Override
+		public String getName() {
+			return NAME;
+		}
+	}
+
+	public static class Survival extends InfinityInventoryPart {
+		public static final String NAME = "survival_infinity";
+
+		protected Survival(InventoryHandler parent, SlotRange slotRange) {
+			super(parent, slotRange, 0);
+		}
+
+		@Override
+		public String getName() {
+			return NAME;
+		}
 	}
 }
