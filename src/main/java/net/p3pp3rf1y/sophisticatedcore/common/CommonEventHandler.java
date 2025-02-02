@@ -15,7 +15,7 @@ public class CommonEventHandler {
 		ModFluids.registerHandlers(modBus);
 		ModParticles.registerParticles(modBus);
 		ModRecipes.registerHandlers(modBus);
-		modBus.addListener(ModPayloads::registerPackets);
+		modBus.addListener(ModPayloads::registerPayloads);
 		IEventBus eventBus = NeoForge.EVENT_BUS;
 
 		eventBus.addListener(ItemStackKey::clearCacheOnTickEnd);

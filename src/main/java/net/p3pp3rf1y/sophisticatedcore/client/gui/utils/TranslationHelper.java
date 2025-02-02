@@ -4,7 +4,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.Item;
 import net.p3pp3rf1y.sophisticatedcore.SophisticatedCore;
+import net.p3pp3rf1y.sophisticatedcore.util.RegistryHelper;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -44,7 +46,7 @@ public class TranslationHelper {
 		upgradeControlsPrefix = guiUpgradePrefix + CONTROLS_SUFFIX;
 	}
 
-	public Component translStatusMessage(String statusMessage, Object... params) {
+	public MutableComponent translStatusMessage(String statusMessage, Object... params) {
 		return Component.translatable(guiStatusPrefix + statusMessage, params);
 	}
 
@@ -105,6 +107,10 @@ public class TranslationHelper {
 
 	public String translUpgradeControl(String controlName) {
 		return upgradeControlsPrefix + controlName;
+	}
+
+	public String translItemTooltip(Item item) {
+		return translItemTooltip(RegistryHelper.getItemKey(item).getPath());
 	}
 
 	public String translItemTooltip(String itemName) {

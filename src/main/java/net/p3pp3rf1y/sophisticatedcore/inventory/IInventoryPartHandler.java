@@ -2,6 +2,7 @@ package net.p3pp3rf1y.sophisticatedcore.inventory;
 
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -13,6 +14,7 @@ import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 
@@ -43,7 +45,7 @@ public interface IInventoryPartHandler {
 		//noop
 	}
 
-	default boolean isItemValid(int slot, ItemStack stack) {
+	default boolean isItemValid(int slot, ItemStack stack, @Nullable Player player, BiPredicate<Integer, ItemStack> isItemValidSuper) {
 		return false;
 	}
 
@@ -92,6 +94,10 @@ public interface IInventoryPartHandler {
 		//noop
 	}
 
+	default boolean isInfinite(int slot) {
+		return false;
+	}
+
 	class Default implements IInventoryPartHandler {
 		public static final String NAME = "default";
 		private final InventoryHandler parent;
@@ -128,7 +134,7 @@ public interface IInventoryPartHandler {
 		}
 
 		@Override
-		public boolean isItemValid(int slot, ItemStack stack) {
+		public boolean isItemValid(int slot, ItemStack stack, @Nullable Player player, BiPredicate<Integer, ItemStack> isItemValidSuper) {
 			return true;
 		}
 

@@ -13,11 +13,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.IItemHandlerSimpleInserter;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ITrackedContentsItemHandler;
+import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ItemStackKey;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.IPickupResponseUpgrade;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeHandler;
@@ -31,6 +33,16 @@ import java.util.function.*;
 
 public class InventoryHelper {
 	private InventoryHelper() {}
+
+	private static final List<Function<Player, IItemHandler>> PLAYER_INVENTORY_PROVIDERS = new ArrayList<>();
+
+	static {
+		registerPlayerInventoryProvider(player -> player.getCapability(Capabilities.ItemHandler.ENTITY));
+	}
+
+	public static void registerPlayerInventoryProvider(Function<Player, IItemHandler> provider) {
+		PLAYER_INVENTORY_PROVIDERS.add(provider);
+	}
 
 	public static Optional<ItemStack> getItemFromEitherHand(Player player, Item item) {
 		ItemStack mainHandItem = player.getMainHandItem();
@@ -116,11 +128,15 @@ public class InventoryHelper {
 	}
 
 	public static ItemStack extractFromInventory(Item item, int count, IItemHandler inventory, boolean simulate) {
+		return extractFromInventory(stack -> stack.getItem() == item, count, inventory, simulate);
+	}
+
+	public static ItemStack extractFromInventory(Predicate<ItemStack> stackMatcher, int count, IItemHandler inventory, boolean simulate) {
 		ItemStack ret = ItemStack.EMPTY;
 		int slots = inventory.getSlots();
 		for (int slot = 0; slot < slots && ret.getCount() < count; slot++) {
 			ItemStack slotStack = inventory.getStackInSlot(slot);
-			if (slotStack.getItem() == item && (ret.isEmpty() || ItemStack.isSameItemSameComponents(ret, slotStack))) {
+			if (stackMatcher.test(slotStack) && (ret.isEmpty() || ItemStack.isSameItemSameComponents(ret, slotStack))) {
 				int toExtract = Math.min(slotStack.getCount(), count - ret.getCount());
 				ItemStack extractedStack = inventory.extractItem(slot, toExtract, simulate);
 				if (ret.isEmpty()) {
@@ -188,9 +204,13 @@ public class InventoryHelper {
 	}
 
 	public static void iterate(IItemHandler handler, BiConsumer<Integer, ItemStack> actOn, BooleanSupplier shouldExit) {
+		iterate(handler, actOn, shouldExit, true);
+	}
+
+	public static void iterate(IItemHandler handler, BiConsumer<Integer, ItemStack> actOn, BooleanSupplier shouldExit, boolean getVirtualCounts) {
 		int slots = handler.getSlots();
 		for (int slot = 0; slot < slots; slot++) {
-			ItemStack stack = handler.getStackInSlot(slot);
+			ItemStack stack = !getVirtualCounts && handler instanceof InventoryHandler inventoryHandler ? inventoryHandler.getSlotStack(slot) : handler.getStackInSlot(slot);
 			actOn.accept(slot, stack);
 			if (shouldExit.getAsBoolean()) {
 				break;
@@ -322,6 +342,10 @@ public class InventoryHelper {
 	}
 
 	static Map<ItemStackKey, Integer> getCompactedStacks(IItemHandler handler, Set<Integer> ignoreSlots) {
+		return getCompactedStacks(handler, ignoreSlots, true);
+	}
+
+	static Map<ItemStackKey, Integer> getCompactedStacks(IItemHandler handler, Set<Integer> ignoreSlots, boolean getVirtualCounts) {
 		Map<ItemStackKey, Integer> ret = new HashMap<>();
 		iterate(handler, (slot, stack) -> {
 			if (stack.isEmpty() || ignoreSlots.contains(slot)) {
@@ -329,7 +353,7 @@ public class InventoryHelper {
 			}
 			ItemStackKey itemStackKey = ItemStackKey.of(stack);
 			ret.put(itemStackKey, ret.computeIfAbsent(itemStackKey, fs -> 0) + stack.getCount());
-		});
+		}, () -> false, getVirtualCounts);
 		return ret;
 	}
 
@@ -412,19 +436,29 @@ public class InventoryHelper {
 	}
 
 	public static void dropItems(ItemStackHandler inventoryHandler, Level level, double x, double y, double z) {
-		iterate(inventoryHandler, (slot, stack) -> dropItem(inventoryHandler, level, x, y, z, slot, stack));
+		iterate(inventoryHandler, (slot, stack) -> dropItem(inventoryHandler, level, x, y, z, slot, stack), () -> false, false);
 	}
 
-	public static void dropItem(ItemStackHandler inventoryHandler, Level level, double x, double y, double z, Integer slot, ItemStack stack) {
+	public static void dropItem(ItemStackHandler handler, Level level, double x, double y, double z, Integer slot, ItemStack stack) {
 		if (stack.isEmpty()) {
 			return;
 		}
-		ItemStack extractedStack = inventoryHandler.extractItem(slot, stack.getMaxStackSize(), false);
-		while (!extractedStack.isEmpty()) {
-			Containers.dropItemStack(level, x, y, z, extractedStack);
-			extractedStack = inventoryHandler.extractItem(slot, stack.getMaxStackSize(), false);
+		if (handler instanceof InventoryHandler inventoryHandler) {
+			int countToExtract = stack.getCount();
+			while (countToExtract > 0) {
+				int countToDrop = Math.min(stack.getMaxStackSize(), countToExtract);
+				Containers.dropItemStack(level, x, y, z, stack.copyWithCount(countToDrop));
+				countToExtract -= countToDrop;
+			}
+			inventoryHandler.setSlotStack(slot, ItemStack.EMPTY);
+		} else {
+			ItemStack extractedStack = handler.extractItem(slot, stack.getMaxStackSize(), false);
+			while (!extractedStack.isEmpty()) {
+				Containers.dropItemStack(level, x, y, z, extractedStack);
+				extractedStack = handler.extractItem(slot, stack.getMaxStackSize(), false);
+			}
+			handler.setStackInSlot(slot, ItemStack.EMPTY);
 		}
-		inventoryHandler.setStackInSlot(slot, ItemStack.EMPTY);
 	}
 
 	public static int getAnalogOutputSignal(ITrackedContentsItemHandler handler) {
@@ -439,5 +473,24 @@ public class InventoryHelper {
 		});
 		double percentFilled = totalFilled.get() / handler.getSlots();
 		return Mth.floor(percentFilled * 14.0F) + (isEmpty.get() ? 0 : 1);
+	}
+
+	public static List<IItemHandler> getItemHandlersFromPlayerIncludingContainers(Player player) {
+		List<IItemHandler> itemHandlers = new ArrayList<>();
+		PLAYER_INVENTORY_PROVIDERS.forEach(provider -> {
+			IItemHandler itemHandler = provider.apply(player);
+			itemHandlers.add(itemHandler);
+			for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
+				ItemStack slotStack = itemHandler.getStackInSlot(slot);
+				if (slotStack.isEmpty()) {
+					continue;
+				}
+				IItemHandler containerHandler = slotStack.getCapability(Capabilities.ItemHandler.ITEM);
+				if (containerHandler != null) {
+					itemHandlers.add(containerHandler);
+				}
+			}
+		});
+		return itemHandlers;
 	}
 }

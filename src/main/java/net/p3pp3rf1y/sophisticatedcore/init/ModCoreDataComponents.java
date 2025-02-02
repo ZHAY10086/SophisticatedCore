@@ -4,9 +4,9 @@ import com.mojang.serialization.Codec;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
@@ -17,6 +17,7 @@ import net.p3pp3rf1y.sophisticatedcore.common.gui.SortBy;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.FilterAttributes;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.feeding.HungerLevel;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.filter.Direction;
+import net.p3pp3rf1y.sophisticatedcore.upgrades.jukebox.RepeatMode;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.xppump.AutomationDirection;
 import net.p3pp3rf1y.sophisticatedcore.util.SimpleItemContent;
 
@@ -45,8 +46,8 @@ public class ModCoreDataComponents {
     public static final Supplier<DataComponentType<SortBy>> SORT_BY = DATA_COMPONENT_TYPES.register("sort_by",
             () -> new DataComponentType.Builder<SortBy>().persistent(SortBy.CODEC).networkSynchronized(SortBy.STREAM_CODEC).build());
 
-    public static final Supplier<DataComponentType<CompoundTag>> RENDER_INFO_TAG = DATA_COMPONENT_TYPES.register("render_info_tag",
-            () -> new DataComponentType.Builder<CompoundTag>().persistent(CompoundTag.CODEC).networkSynchronized(ByteBufCodecs.COMPOUND_TAG).build());
+    public static final Supplier<DataComponentType<CustomData>> RENDER_INFO_TAG = DATA_COMPONENT_TYPES.register("render_info_tag",
+            () -> new DataComponentType.Builder<CustomData>().persistent(CustomData.CODEC).networkSynchronized(CustomData.STREAM_CODEC).build());
 
     public static final Supplier<DataComponentType<Boolean>> SHIFT_CLICK_INTO_STORAGE = DATA_COMPONENT_TYPES.register("shift_click_into_storage",
             () -> new DataComponentType.Builder<Boolean>().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build());
@@ -151,6 +152,18 @@ public class ModCoreDataComponents {
 
     public static final Supplier<DataComponentType<Boolean>> ENABLED = DATA_COMPONENT_TYPES.register("enabled",
             () -> new DataComponentType.Builder<Boolean>().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build());
+
+    public static final Supplier<DataComponentType<RepeatMode>> REPEAT_MODE = DATA_COMPONENT_TYPES.register("repeat_mode",
+            () -> new DataComponentType.Builder<RepeatMode>().persistent(RepeatMode.CODEC).networkSynchronized(RepeatMode.STREAM_CODEC).build());
+
+    public static final Supplier<DataComponentType<Boolean>> SHUFFLE = DATA_COMPONENT_TYPES.register("shuffle",
+            () -> new DataComponentType.Builder<Boolean>().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build());
+
+    public static final Supplier<DataComponentType<Integer>> DISC_SLOT_ACTIVE = DATA_COMPONENT_TYPES.register("disc_slot_active",
+            () -> new DataComponentType.Builder<Integer>().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.INT).build());
+
+    public static final Supplier<DataComponentType<Long>> DISC_FINISH_TIME = DATA_COMPONENT_TYPES.register("disc_finish_time",
+            () -> new DataComponentType.Builder<Long>().persistent(Codec.LONG).networkSynchronized(ByteBufCodecs.VAR_LONG).build());
 
     public static void register(IEventBus modBus) {
         DATA_COMPONENT_TYPES.register(modBus);

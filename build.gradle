@@ -114,6 +114,8 @@ dependencies {
     localRuntime "curse.maven:resourcefullib-570073:${resourcefullib_cf_file_id}"
     compileOnly "curse.maven:athena-841890:${athena_cf_file_id}"
     localRuntime "curse.maven:athena-841890:${athena_cf_file_id}"
+    compileOnly "curse.maven:curios-1037991:${curios_cf_file_id}"
+    localRuntime "curse.maven:curios-1037991:${curios_cf_file_id}"
 /*
     compileOnly "curse.maven:autoreglib-250363:${autoreglib_cf_file_id}")
     compileOnly "curse.maven:quark-243121:${quark_cf_file_id}")
