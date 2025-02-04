@@ -174,8 +174,13 @@ public abstract class InventoryHandler extends ItemStackHandler implements ITrac
 		if (!stackUpgradeConfig.canStackItem(stack.getItem())) {
 			return stack.getMaxStackSize();
 		}
+		int maxStackSize = stack.isEmpty() ? getBaseSlotLimit() : stack.getMaxStackSize();
 
-		int limit = MathHelper.intMaxCappedMultiply(stack.getMaxStackSize(), (baseSlotLimit / 64));
+		if (baseSlotLimit < 64) {
+			return (int) Math.max(1, (double) maxStackSize * baseSlotLimit / 64);
+		}
+
+		int limit = MathHelper.intMaxCappedMultiply(maxStackSize, baseSlotLimit / 64);
 		int remainder = baseSlotLimit % 64;
 		if (remainder > 0) {
 			limit = MathHelper.intMaxCappedAddition(limit, remainder * stack.getMaxStackSize() / 64);

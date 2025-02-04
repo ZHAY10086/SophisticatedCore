@@ -25,7 +25,6 @@ import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.DyeColor;
@@ -589,8 +588,8 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			if (StorageContainerMenuBase.canItemQuickReplace(slot, carriedStack) && menu.canDragTo(slot)) {
 				flag = true;
 				int slotStackCount = stackToRender.isEmpty() ? 0 : stackToRender.getCount();
-				int renderCount = AbstractContainerMenu.getQuickCraftPlaceCount(quickCraftSlots, quickCraftingType, carriedStack) + slotStackCount;
-				int slotLimit = slot.getMaxStackSize(stackToRender);
+				int renderCount = StorageContainerMenuBase.getQuickCraftPlaceCount(slot, quickCraftSlots.size(), quickCraftingType, carriedStack) + slotStackCount;
+				int slotLimit = stackToRender.isEmpty() ? 64 : slot.getMaxStackSize(stackToRender);
 				if (renderCount > slotLimit) {
 					stackCountText = ChatFormatting.YELLOW + CountAbbreviator.abbreviate(slotLimit);
 				}
@@ -745,7 +744,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 	@Override
 	protected List<Component> getTooltipFromContainerItem(ItemStack itemStack) {
 		List<Component> ret = getTooltipFromItem(minecraft, itemStack);
-		if (hoveredSlot != null && hoveredSlot.getMaxStackSize() > 64) {
+		if (hoveredSlot != null && hoveredSlot instanceof StorageInventorySlot && hoveredSlot.getMaxStackSize() != itemStack.getMaxStackSize()) {
 			ret.add(Component.translatable(TranslationHelper.INSTANCE.translGuiTooltip("stack_count"),
 							Component.literal(NumberFormat.getNumberInstance().format(itemStack.getCount())).withStyle(ChatFormatting.DARK_AQUA)
 									.append(Component.literal(" / ").withStyle(ChatFormatting.GRAY))
@@ -1009,7 +1008,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 					ItemStack slotStack = slot.getItem();
 					int slotStackCount = slotStack.isEmpty() ? 0 : slotStack.getCount();
 					int maxStackSize = slot.getMaxStackSize(carriedStack);
-					int quickCraftPlaceCount = Math.min(AbstractContainerMenu.getQuickCraftPlaceCount(quickCraftSlots, quickCraftingType, carriedStack) + slotStackCount, maxStackSize);
+					int quickCraftPlaceCount = Math.min(StorageContainerMenuBase.getQuickCraftPlaceCount(slot, quickCraftSlots.size(), quickCraftingType, carriedStack) + slotStackCount, maxStackSize);
 					quickCraftingRemainder -= quickCraftPlaceCount - slotStackCount;
 				}
 			}

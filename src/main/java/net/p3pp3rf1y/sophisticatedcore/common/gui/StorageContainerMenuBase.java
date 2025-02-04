@@ -9,6 +9,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
@@ -987,6 +988,17 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 		}
 	}
 
+	public static int getQuickCraftPlaceCount(Slot slot, int quickCraftSlotsSize, int quickCraftingType, ItemStack carriedStack) {
+		int placeCount;
+		switch (quickCraftingType) {
+			case 0 -> placeCount = Mth.floor((float) carriedStack.getCount() / (float) quickCraftSlotsSize);
+			case 1 -> placeCount = 1;
+			case 2 -> placeCount = carriedStack.getMaxStackSize();
+			default -> placeCount = carriedStack.getCount();
+		}
+		return Math.min(slot.getMaxStackSize(carriedStack), placeCount);
+	}
+
 	//copy of Container's doClick with the replacement of inventorySlots.get to getSlot, call to onswapcraft as that's protected in vanilla and an addition of upgradeSlots to pickup all
 	@SuppressWarnings("java:S3776")
 	//complexity here is brutal, but it's something that's in vanilla and need to keep this as close to it as possible for easier ports
@@ -1041,7 +1053,7 @@ public abstract class StorageContainerMenuBase<S extends IStorageWrapper> extend
 								slotStackLimit = carriedCopy.getMaxStackSize();
 							}
 
-							int l = Math.min(getQuickCraftPlaceCount(this.quickcraftSlots, this.quickcraftType, carriedCopy) + j, slotStackLimit);
+							int l = Math.min(getQuickCraftPlaceCount(slot1, this.quickcraftSlots.size(), this.quickcraftType, carriedCopy) + j, slotStackLimit);
 							j1 -= l - j;
 							slot1.setByPlayer(carriedCopy.copyWithCount(l));
 						}
