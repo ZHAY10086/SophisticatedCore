@@ -631,12 +631,14 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 
 	private void renderSlotBackground(GuiGraphics guiGraphics, Slot slot, int i, int j) {
 		Optional<ItemStack> memorizedStack = getMenu().getMemorizedStackInSlot(slot.index);
-		if (memorizedStack.isPresent()) {
-			guiGraphics.renderItem(memorizedStack.get(), i, j);
-			drawStackOverlay(guiGraphics, i, j);
-		} else if (!getMenu().getSlotFilterItem(slot.index).isEmpty()) {
-			guiGraphics.renderItem(getMenu().getSlotFilterItem(slot.index), i, j);
-			drawStackOverlay(guiGraphics, i, j);
+		if (getMenu().isStorageInventorySlot(slot.index)) {
+			if (memorizedStack.isPresent()) {
+				guiGraphics.renderItem(memorizedStack.get(), i, j);
+				drawStackOverlay(guiGraphics, i, j);
+			} else if (!getMenu().getSlotFilterItem(slot.index).isEmpty()) {
+				guiGraphics.renderItem(getMenu().getSlotFilterItem(slot.index), i, j);
+				drawStackOverlay(guiGraphics, i, j);
+			}
 		} else {
 			Pair<ResourceLocation, ResourceLocation> pair = slot.getNoItemIcon();
 			if (pair != null) {
