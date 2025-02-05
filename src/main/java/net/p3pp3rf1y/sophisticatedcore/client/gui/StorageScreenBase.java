@@ -634,17 +634,18 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			if (memorizedStack.isPresent()) {
 				guiGraphics.renderItem(memorizedStack.get(), i, j);
 				drawStackOverlay(guiGraphics, i, j);
+				return;
 			} else if (!getMenu().getSlotFilterItem(slot.index).isEmpty()) {
 				guiGraphics.renderItem(getMenu().getSlotFilterItem(slot.index), i, j);
 				drawStackOverlay(guiGraphics, i, j);
+				return;
 			}
-		} else {
-			Pair<ResourceLocation, ResourceLocation> pair = slot.getNoItemIcon();
-			if (pair != null) {
-				//noinspection ConstantConditions - by this point minecraft isn't null
-				TextureAtlasSprite textureatlassprite = minecraft.getTextureAtlas(pair.getFirst()).apply(pair.getSecond());
-				guiGraphics.blit(i, j, 0, 16, 16, textureatlassprite);
-			}
+		}
+		Pair<ResourceLocation, ResourceLocation> pair = slot.getNoItemIcon();
+		if (pair != null) {
+			//noinspection ConstantConditions - by this point minecraft isn't null
+			TextureAtlasSprite textureatlassprite = minecraft.getTextureAtlas(pair.getFirst()).apply(pair.getSecond());
+			guiGraphics.blit(i, j, 0, 16, 16, textureatlassprite);
 		}
 	}
 
