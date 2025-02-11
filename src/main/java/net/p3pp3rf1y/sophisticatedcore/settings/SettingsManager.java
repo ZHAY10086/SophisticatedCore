@@ -15,7 +15,7 @@ public class SettingsManager {
 	private static final Map<String, MainSetting<?>> settings = new HashMap<>();
 
 	public static final MainSetting<Boolean> SHIFT_CLICK_INTO_OPEN_TAB_FIRST =
-			new MainSetting<>("shiftClickOpenTab", NBTHelper::getBoolean, CompoundTag::putBoolean, true);
+			new MainSetting<>("shiftClickOpenTab", NBTHelper::getBoolean, CompoundTag::putBoolean, false);
 	public static final MainSetting<Boolean> KEEP_TAB_OPEN =
 			new MainSetting<>("keepTabOpen", NBTHelper::getBoolean, CompoundTag::putBoolean, true);
 	public static final MainSetting<Boolean> KEEP_SEARCH_PHRASE =
