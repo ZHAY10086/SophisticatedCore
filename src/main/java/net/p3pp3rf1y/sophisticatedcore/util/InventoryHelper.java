@@ -17,6 +17,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.wrapper.*;
 import net.p3pp3rf1y.sophisticatedcore.inventory.IItemHandlerSimpleInserter;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ITrackedContentsItemHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
@@ -35,9 +36,19 @@ public class InventoryHelper {
 	private InventoryHelper() {}
 
 	private static final List<Function<Player, IItemHandler>> PLAYER_INVENTORY_PROVIDERS = new ArrayList<>();
+	private static final List<Function<Player, IItemHandler>> PLAYER_EQUIPMENT_INVENTORY_PROVIDERS = new ArrayList<>();
 
 	static {
 		registerPlayerInventoryProvider(player -> player.getCapability(Capabilities.ItemHandler.ENTITY));
+		registerEquipmentInventoryProvider(player -> new CombinedInvWrapper(
+				new PlayerArmorInvWrapper(player.getInventory()),
+				new PlayerOffhandInvWrapper(player.getInventory()),
+				new RangedWrapper(new InvWrapper(player.getInventory()), player.getInventory().selected, player.getInventory().selected + 1))
+				);
+	}
+
+	public static void registerEquipmentInventoryProvider(Function<Player, IItemHandler> provider) {
+		PLAYER_EQUIPMENT_INVENTORY_PROVIDERS.add(provider);
 	}
 
 	public static void registerPlayerInventoryProvider(Function<Player, IItemHandler> provider) {
@@ -490,6 +501,15 @@ public class InventoryHelper {
 					itemHandlers.add(containerHandler);
 				}
 			}
+		});
+		return itemHandlers;
+	}
+
+	public static List<IItemHandler> getEquipmentItemHandlersFromPlayer(Player player) {
+		List<IItemHandler> itemHandlers = new ArrayList<>();
+		PLAYER_EQUIPMENT_INVENTORY_PROVIDERS.forEach(provider -> {
+			IItemHandler itemHandler = provider.apply(player);
+			itemHandlers.add(itemHandler);
 		});
 		return itemHandlers;
 	}
