@@ -1,8 +1,8 @@
 package net.p3pp3rf1y.sophisticatedcore.upgrades.xppump;
 
+import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -11,16 +11,20 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.items.IItemHandler;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageFluidHandler;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.init.ModFluids;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.ITickableUpgrade;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeWrapperBase;
+import net.p3pp3rf1y.sophisticatedcore.util.InventoryHelper;
 import net.p3pp3rf1y.sophisticatedcore.util.NBTHelper;
 import net.p3pp3rf1y.sophisticatedcore.util.XpHelper;
 
 import javax.annotation.Nullable;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class XpPumpUpgradeWrapper extends UpgradeWrapperBase<XpPumpUpgradeWrapper, XpPumpUpgradeItem> implements ITickableUpgrade {
@@ -64,21 +68,37 @@ public class XpPumpUpgradeWrapper extends UpgradeWrapperBase<XpPumpUpgradeWrappe
 			return;
 		}
 
-		Map.Entry<EquipmentSlot, ItemStack> entry = EnchantmentHelper.getRandomItemWith(Enchantments.MENDING, player, ItemStack::isDamaged);
-		if (entry != null) {
-			ItemStack itemStack = entry.getValue();
+		getRandomDamagedItemWithMending(player)
+				.ifPresent(itemStack -> {
 			if (!itemStack.isEmpty() && itemStack.isDamaged() && itemStack.getXpRepairRatio() > 0) {
 				float xpToTryDrain = Math.min(xpPumpUpgradeConfig.maxXpPointsPerMending.get(), itemStack.getDamageValue() / itemStack.getXpRepairRatio());
 				if (xpToTryDrain > 0) {
 					storageWrapper.getFluidHandler().ifPresent(fluidHandler -> {
 						FluidStack drained = fluidHandler.drain(ModFluids.EXPERIENCE_TAG, XpHelper.experienceToLiquid(xpToTryDrain), IFluidHandler.FluidAction.EXECUTE, false);
 						float xpDrained = XpHelper.liquidToExperience(drained.getAmount());
-						int durationToRepair = (int) (xpDrained * itemStack.getXpRepairRatio());
-						itemStack.setDamageValue(itemStack.getDamageValue() - durationToRepair);
+								int durabilityToRepair = (int) (xpDrained * itemStack.getXpRepairRatio());
+								itemStack.setDamageValue(itemStack.getDamageValue() - durabilityToRepair);
 					});
 				}
 			}
+		});
+	}
+
+	private Optional<ItemStack> getRandomDamagedItemWithMending(Player player) {
+		List<ItemStack> matchingItems = new ArrayList<>();
+		List<IItemHandler> equipmentHandlers = InventoryHelper.getEquipmentItemHandlersFromPlayer(player);
+
+		for(IItemHandler handler : equipmentHandlers) {
+			for (int slot = 0; slot < handler.getSlots(); slot++) {
+				ItemStack itemStack = handler.getStackInSlot(slot);
+
+				if (itemStack.isDamaged() && EnchantmentHelper.getTagEnchantmentLevel(Enchantments.MENDING, itemStack) > 0) {
+					matchingItems.add(itemStack);
+				}
+			}
 		}
+
+		return Util.getRandomSafe(matchingItems, player.getRandom());
 	}
 
 	private void interactWithPlayer(Player player) {

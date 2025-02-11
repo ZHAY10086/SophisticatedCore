@@ -17,7 +17,7 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
-import net.minecraftforge.items.wrapper.EmptyHandler;
+import net.minecraftforge.items.wrapper.*;
 import net.p3pp3rf1y.sophisticatedcore.inventory.IItemHandlerSimpleInserter;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ITrackedContentsItemHandler;
 import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
@@ -36,9 +36,20 @@ public class InventoryHelper {
 	private InventoryHelper() {}
 
 	private static final List<Function<Player, IItemHandler>> PLAYER_INVENTORY_PROVIDERS = new ArrayList<>();
+	private static final List<Function<Player, IItemHandler>> PLAYER_EQUIPMENT_INVENTORY_PROVIDERS = new ArrayList<>();
 
 	static {
 		registerPlayerInventoryProvider(player -> player.getCapability(ForgeCapabilities.ITEM_HANDLER).orElse(EmptyHandler.INSTANCE));
+		registerEquipmentInventoryProvider(player -> new CombinedInvWrapper(
+				new PlayerArmorInvWrapper(player.getInventory()),
+				new PlayerOffhandInvWrapper(player.getInventory()),
+				new RangedWrapper(new InvWrapper(player.getInventory()), player.getInventory().selected, player.getInventory().selected + 1))
+		);
+	}
+
+
+	public static void registerEquipmentInventoryProvider(Function<Player, IItemHandler> provider) {
+		PLAYER_EQUIPMENT_INVENTORY_PROVIDERS.add(provider);
 	}
 
 	public static void registerPlayerInventoryProvider(Function<Player, IItemHandler> provider) {
@@ -486,6 +497,15 @@ public class InventoryHelper {
 				}
 				slotStack.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(itemHandlers::add);
 			}
+		});
+		return itemHandlers;
+	}
+
+	public static List<IItemHandler> getEquipmentItemHandlersFromPlayer(Player player) {
+		List<IItemHandler> itemHandlers = new ArrayList<>();
+		PLAYER_EQUIPMENT_INVENTORY_PROVIDERS.forEach(provider -> {
+			IItemHandler itemHandler = provider.apply(player);
+			itemHandlers.add(itemHandler);
 		});
 		return itemHandlers;
 	}
