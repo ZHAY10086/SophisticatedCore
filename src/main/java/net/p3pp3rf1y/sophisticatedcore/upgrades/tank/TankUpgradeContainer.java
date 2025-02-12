@@ -7,7 +7,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.items.IItemHandler;
 import net.p3pp3rf1y.sophisticatedcore.SophisticatedCore;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.INameableEmptySlot;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.TranslationHelper;
@@ -51,10 +50,12 @@ public class TankUpgradeContainer extends UpgradeContainerBase<TankUpgradeWrappe
 	}
 
 	private static class TankIOSlot extends SlotSuppliedHandler implements INameableEmptySlot {
+		private final Supplier<TankUpgradeWrapper.TankComponentItemHandler> itemHandlerSupplier;
 		private final Component emptyTooltip;
 
-		public TankIOSlot(Supplier<IItemHandler> itemHandlerSupplier, int slot, int xPosition, int yPosition, Component emptyTooltip) {
-			super(itemHandlerSupplier, slot, xPosition, yPosition);
+		public TankIOSlot(Supplier<TankUpgradeWrapper.TankComponentItemHandler> itemHandlerSupplier, int slot, int xPosition, int yPosition, Component emptyTooltip) {
+			super(itemHandlerSupplier::get, slot, xPosition, yPosition);
+			this.itemHandlerSupplier = itemHandlerSupplier;
 			this.emptyTooltip = emptyTooltip;
 		}
 
@@ -66,6 +67,11 @@ public class TankUpgradeContainer extends UpgradeContainerBase<TankUpgradeWrappe
 		@Override
 		public Component getEmptyTooltip() {
 			return emptyTooltip;
+		}
+
+		@Override
+		public boolean mayPlace(ItemStack stack) {
+			return itemHandlerSupplier.get().isItemValidForPlacement(getSlotIndex(), stack);
 		}
 	}
 }
