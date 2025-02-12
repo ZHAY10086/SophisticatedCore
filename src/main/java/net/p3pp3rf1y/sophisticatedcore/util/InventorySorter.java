@@ -147,7 +147,7 @@ public class InventorySorter {
 
 	private static int placeStack(IItemHandlerModifiable handler, ItemStackKey current, int count, int slot, boolean countWithCurrentStack) {
 		if (handler instanceof InventoryHandler inventoryHandler) {
-			return placeStack(current, count, slot, countWithCurrentStack, inventoryHandler::getStackLimit, inventoryHandler::getSlotStack, inventoryHandler::setSlotStack);
+			return placeStack(current, count, slot, countWithCurrentStack, (s, stack) -> inventoryHandler.getBaseStackLimit(stack), inventoryHandler::getSlotStack, inventoryHandler::setSlotStack);
 		} else {
 			return placeStack(current, count, slot, countWithCurrentStack, (s, stack) -> handler.getSlotLimit(s), handler::getStackInSlot, handler::setStackInSlot);
 		}
