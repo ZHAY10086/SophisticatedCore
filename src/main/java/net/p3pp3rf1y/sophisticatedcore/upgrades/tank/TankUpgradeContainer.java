@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.items.IItemHandler;
 import net.p3pp3rf1y.sophisticatedcore.SophisticatedCore;
@@ -57,6 +58,11 @@ public class TankUpgradeContainer extends UpgradeContainerBase<TankUpgradeWrappe
 		@Override
 		public Component getEmptyTooltip() {
 			return emptyTooltip;
+		}
+
+		@Override
+		public boolean mayPlace(ItemStack stack) {
+			return getItemHandler().isItemValid(getSlotIndex(), stack);
 		}
 	}
 }

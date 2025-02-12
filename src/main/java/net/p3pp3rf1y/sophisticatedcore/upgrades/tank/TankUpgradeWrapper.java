@@ -3,8 +3,11 @@ package net.p3pp3rf1y.sophisticatedcore.upgrades.tank;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidType;
@@ -13,15 +16,17 @@ import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
+import net.p3pp3rf1y.sophisticatedcore.init.ModFluids;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.IRenderedTankUpgrade;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.IStackableContentsUpgrade;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.ITickableUpgrade;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeWrapperBase;
 import net.p3pp3rf1y.sophisticatedcore.util.NBTHelper;
+import net.p3pp3rf1y.sophisticatedcore.util.XpHelper;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, TankUpgradeItem>
@@ -33,6 +38,19 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 	private final ItemStackHandler inventory;
 	private FluidStack contents;
 	private long cooldownTime = 0;
+
+	private record AlternativeFluidContainerDefinition(Item filledItem, Item emptyItem, Fluid fluid, int amount){
+		public boolean tankContentsEmptyOrMatch(FluidStack contents) {
+			return contents.isEmpty() || fluid.equals(contents.getFluid());
+		}
+		public boolean tankContentsMatch(FluidStack contents) {
+			return !contents.isEmpty() && fluid.equals(contents.getFluid());
+		}
+	}
+
+	private static final List<AlternativeFluidContainerDefinition> ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS = List.of(
+			new AlternativeFluidContainerDefinition(Items.EXPERIENCE_BOTTLE, Items.GLASS_BOTTLE, ModFluids.XP_STILL.get(), XpHelper.experienceToLiquid(8))
+	);
 
 	protected TankUpgradeWrapper(IStorageWrapper storageWrapper, ItemStack upgrade, Consumer<ItemStack> upgradeSaveHandler) {
 		super(storageWrapper, upgrade, upgradeSaveHandler);
@@ -47,9 +65,9 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 			@Override
 			public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
 				if (slot == INPUT_SLOT) {
-					return isValidInputItem(stack);
+					return isValidInputItem(stack) || ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS.stream().anyMatch(alt -> stack.getItem() == alt.filledItem && alt.tankContentsEmptyOrMatch(contents) || stack.getItem() == alt.emptyItem);
 				} else if (slot == OUTPUT_SLOT) {
-					return isValidOutputItem(stack);
+					return isValidOutputItem(stack)|| ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS.stream().anyMatch(alt -> stack.getItem() == alt.emptyItem && alt.tankContentsMatch(contents) || stack.getItem() == alt.filledItem);
 				}
 				return false;
 			}
@@ -178,22 +196,57 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 	}
 
 	@Override
-	public void tick(@Nullable Entity entity, Level world, BlockPos pos) {
-		if (world.getGameTime() < cooldownTime) {
+	public void tick(@Nullable Entity entity, Level level, BlockPos pos) {
+		if (level.getGameTime() < cooldownTime) {
 			return;
 		}
 
-		AtomicBoolean didSomething = new AtomicBoolean(false);
-		inventory.getStackInSlot(INPUT_SLOT).getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).ifPresent(fluidHandler ->
-				didSomething.set(drainHandler(fluidHandler, stack -> inventory.setStackInSlot(INPUT_SLOT, stack)))
-		);
-		inventory.getStackInSlot(OUTPUT_SLOT).getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).ifPresent(fluidHandler ->
-				didSomething.set(fillHandler(fluidHandler, stack -> inventory.setStackInSlot(OUTPUT_SLOT, stack)))
-		);
-
-		if (didSomething.get()) {
-			cooldownTime = world.getGameTime() + upgradeItem.getTankUpgradeConfig().autoFillDrainContainerCooldown.get();
+		boolean didSomething = false;
+		if (inventory.getStackInSlot(INPUT_SLOT).getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).map(fluidHandler ->
+				drainHandler(fluidHandler, stack -> inventory.setStackInSlot(INPUT_SLOT, stack))).orElse(false)) {
+			didSomething = true;
+		} else {
+			didSomething = drainAlternativeFluidContainer(didSomething);
 		}
+		if (inventory.getStackInSlot(OUTPUT_SLOT).getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).map(fluidHandler ->
+				fillHandler(fluidHandler, stack -> inventory.setStackInSlot(OUTPUT_SLOT, stack))).orElse(false)) {
+			didSomething = true;
+		} else {
+			didSomething = fillAlternativeFluidContainer(didSomething);
+		}
+
+		if (didSomething) {
+			cooldownTime = level.getGameTime() + upgradeItem.getTankUpgradeConfig().autoFillDrainContainerCooldown.get();
+		}
+	}
+
+	private boolean fillAlternativeFluidContainer(boolean didSomething) {
+		for (AlternativeFluidContainerDefinition alt : ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS) {
+			if (inventory.getStackInSlot(OUTPUT_SLOT).getItem() == alt.emptyItem && alt.tankContentsMatch(contents)) {
+				if (drain(alt.amount, IFluidHandler.FluidAction.SIMULATE, false).getAmount() == alt.amount) {
+					drain(alt.amount, IFluidHandler.FluidAction.EXECUTE, false);
+					inventory.setStackInSlot(OUTPUT_SLOT, new ItemStack(alt.filledItem));
+					serializeContents();
+					didSomething = true;
+					break;
+				}
+			}
+		}
+		return didSomething;
+	}
+
+	private boolean drainAlternativeFluidContainer(boolean didSomething) {
+		for (AlternativeFluidContainerDefinition alt : ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS) {
+			if (inventory.getStackInSlot(INPUT_SLOT).getItem() == alt.filledItem && (alt.tankContentsEmptyOrMatch(contents))
+					 && fill(new FluidStack(alt.fluid, alt.amount), IFluidHandler.FluidAction.SIMULATE, true) == alt.amount) {
+				fill(new FluidStack(alt.fluid, alt.amount), IFluidHandler.FluidAction.EXECUTE, false);
+				inventory.setStackInSlot(INPUT_SLOT, new ItemStack(alt.emptyItem));
+				serializeContents();
+				didSomething = true;
+				break;
+			}
+		}
+		return didSomething;
 	}
 
 	public boolean fillHandler(IFluidHandlerItem fluidHandler, Consumer<ItemStack> updateContainerStack) {
@@ -236,4 +289,22 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 	public boolean canBeDisabled() {
 		return false;
 	}
+
+	public boolean isItemValidForPlacement(int slot, ItemStack stack) {
+		if (slot == INPUT_SLOT) {
+			return isValidInputItem(stack);
+		} else if (slot == OUTPUT_SLOT) {
+			return isValidOutputItem(stack);
+		}
+		return false;
+	}
+
+	private boolean isValidInputItem(ItemStack stack) {
+		return isValidFluidItem(stack, false);
+	}
+
+	private boolean isValidOutputItem(ItemStack stack) {
+		return isValidFluidItem(stack, true);
+	}
+
 }
