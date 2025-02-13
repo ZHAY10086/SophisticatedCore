@@ -7,6 +7,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -45,6 +46,7 @@ public class SophisticatedCore {
 
 		IEventBus eventBus = MinecraftForge.EVENT_BUS;
 		eventBus.addListener(SophisticatedCore::serverStarted);
+		eventBus.addListener(SophisticatedCore::serverStopped);
 		eventBus.addListener(SophisticatedCore::onResourceReload);
 	}
 
@@ -53,6 +55,10 @@ public class SophisticatedCore {
 		if (world != null) {
 			RecipeHelper.setLevel(world);
 		}
+	}
+
+	private static void serverStopped(ServerStoppedEvent event) {
+		RecipeHelper.clearListeners();
 	}
 
 	private static void setup(FMLCommonSetupEvent event) {

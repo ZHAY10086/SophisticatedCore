@@ -5,7 +5,6 @@ import com.google.common.cache.CacheBuilder;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,6 +29,7 @@ import net.p3pp3rf1y.sophisticatedcore.inventory.ItemStackKey;
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -38,29 +38,37 @@ import static net.p3pp3rf1y.sophisticatedcore.util.RecipeHelper.CompactingShape.
 
 public class RecipeHelper {
 	private static final int MAX_FOLLOW_UP_COMPACTING_RECIPES = 30;
-	private static RecipeCache clientCache;
-	private static RecipeCache serverCache;
+	@Nullable
+	private static RecipeCache clientCache = null;
+	@Nullable
+	private static RecipeCache serverCache = null;
 
 	private RecipeHelper() {
 	}
 
 	public static void setLevel(Level l) {
-		if (l instanceof ServerLevel) {
-			serverCache = new RecipeCache(l);
-		} else {
-			clientCache = new RecipeCache(l);
-		}
+		getCache().setLevel(l);
+	}
+
+	public static void clearListeners() {
+		runOnCache(cache -> cache.recipeChangeListeners.list.clear());
 	}
 
 	private static void runOnCache(Consumer<RecipeCache> consumer) {
+		consumer.accept(getCache());
+	}
+
+	private static RecipeCache getCache() {
 		if (Thread.currentThread().getThreadGroup() == SidedThreadGroups.SERVER) {
-			if (serverCache != null) {
-				consumer.accept(serverCache);
+			if (serverCache == null) {
+				serverCache = new RecipeCache();
 			}
+			return serverCache;
 		} else {
-			if (clientCache != null) {
-				consumer.accept(clientCache);
+			if (clientCache == null) {
+				clientCache = new RecipeCache();
 			}
+			return clientCache;
 		}
 	}
 
@@ -413,7 +421,7 @@ public class RecipeHelper {
 	}
 
 	private static class RecipeChangeListenerList {
-		private final List<WeakReference<Runnable>> list = Collections.synchronizedList(new ArrayList<>());
+		private final List<WeakReference<Runnable>> list = new CopyOnWriteArrayList<>();
 
 		public void add(Runnable runnable) {
 			list.add(new WeakReference<>(runnable));
@@ -436,11 +444,7 @@ public class RecipeHelper {
 		private final Map<CompactedItem, CompactingResult> compactingResults = new HashMap<>();
 		private final Map<Integer, UncompactingResult> uncompactingResults = new HashMap<>();
 		private final RecipeChangeListenerList recipeChangeListeners = new RecipeChangeListenerList();
-		private final WeakReference<Level> level;
-
-		public RecipeCache(Level level) {
-			this.level = new WeakReference<>(level);
-		}
+		private WeakReference<Level> level;
 
 		public void addRecipeChangeListener(Runnable runnable) {
 			recipeChangeListeners.add(runnable);
@@ -470,6 +474,10 @@ public class RecipeHelper {
 			compactingResults.clear();
 			uncompactingResults.clear();
 			itemCompactingShapes.invalidateAll();
+		}
+
+		public void setLevel(Level l) {
+			level = new WeakReference<>(l);
 		}
 	}
 }
