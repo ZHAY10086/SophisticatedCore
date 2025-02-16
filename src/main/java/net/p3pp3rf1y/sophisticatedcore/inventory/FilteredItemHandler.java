@@ -39,11 +39,10 @@ public class FilteredItemHandler<T extends IItemHandler> implements IItemHandler
 			return inventoryHandler.insertItem(slot, stack, simulate);
 		}
 
-		for (FilterLogic filter : inputFilters) {
-			if (filter.matchesFilter(stack)) {
-				return inventoryHandler.insertItem(slot, stack, simulate);
-			}
+		if (matchesFilters(stack, inputFilters)) {
+			return inventoryHandler.insertItem(slot, stack, simulate);
 		}
+
 		return stack;
 	}
 
@@ -54,12 +53,37 @@ public class FilteredItemHandler<T extends IItemHandler> implements IItemHandler
 			return inventoryHandler.extractItem(slot, amount, simulate);
 		}
 
-		for (FilterLogic filter : outputFilters) {
-			if (filter.matchesFilter(getStackInSlot(slot))) {
-				return inventoryHandler.extractItem(slot, amount, simulate);
+		if (matchesFilters(getStackInSlot(slot), outputFilters)) {
+			return inventoryHandler.extractItem(slot, amount, simulate);
+		}
+
+		return ItemStack.EMPTY;
+	}
+
+	protected boolean matchesFilters(ItemStack stack, List<FilterLogic> filters) {
+		boolean matchAll = shouldMatchAllFilters(filters);
+
+		for (FilterLogic filter : filters) {
+			if (matchAll && !filter.matchesFilter(stack)) {
+				return false;
+			} else if (!matchAll && filter.matchesFilter(stack)) {
+				return true;
 			}
 		}
-		return ItemStack.EMPTY;
+		return matchAll;
+	}
+
+	private boolean shouldMatchAllFilters(List<FilterLogic> filters) {
+		if (filters.size() < 2) {
+			return false;
+		}
+
+		for (FilterLogic filter : filters) {
+			if (!filter.isAllowList()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
@@ -88,11 +112,10 @@ public class FilteredItemHandler<T extends IItemHandler> implements IItemHandler
 				return inventoryHandler.insertItem(stack, simulate);
 			}
 
-			for (FilterLogic filter : inputFilters) {
-				if (filter.matchesFilter(stack)) {
-					return inventoryHandler.insertItem(stack, simulate);
-				}
+			if (matchesFilters(stack, inputFilters)) {
+				return inventoryHandler.insertItem(stack, simulate);
 			}
+
 			return stack;
 		}
 
@@ -101,7 +124,7 @@ public class FilteredItemHandler<T extends IItemHandler> implements IItemHandler
 			Set<ItemStackKey> ret = new HashSet<>();
 
 			inventoryHandler.getTrackedStacks().forEach(ts -> {
-				if (inputFiltersMatchStack(ts.stack())) {
+				if (matchesFilters(ts.stack(), inputFilters)) {
 					ret.add(ts);
 				}
 			});
@@ -109,25 +132,16 @@ public class FilteredItemHandler<T extends IItemHandler> implements IItemHandler
 			return ret;
 		}
 
-		private boolean inputFiltersMatchStack(ItemStack stack) {
-			for (FilterLogic filter : inputFilters) {
-				if (filter.matchesFilter(stack)) {
-					return true;
-				}
-			}
-			return false;
-		}
-
 		@Override
 		public void registerTrackingListeners(Consumer<ItemStackKey> onAddStackKey, Consumer<ItemStackKey> onRemoveStackKey, Runnable onAddFirstEmptySlot, Runnable onRemoveLastEmptySlot) {
 			inventoryHandler.registerTrackingListeners(
 					isk -> {
-						if (inputFiltersMatchStack(isk.stack())) {
+						if (matchesFilters(isk.stack(), inputFilters)) {
 							onAddStackKey.accept(isk);
 						}
 					},
 					isk -> {
-						if (inputFiltersMatchStack(isk.stack())) {
+						if (matchesFilters(isk.stack(), inputFilters)) {
 							onRemoveStackKey.accept(isk);
 						}
 					},
