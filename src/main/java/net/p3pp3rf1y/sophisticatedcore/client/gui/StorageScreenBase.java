@@ -93,6 +93,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 	@Nullable
 	private Button transferToInventoryButton;
 	private TextBox searchBox;
+	private Label noResultsLabel;
 	private Predicate<ItemStack> stackFilter = stack -> searchBox == null || searchBox.getValue().isEmpty()
 			|| (!stack.isEmpty() && stack.getHoverName().getString().toLowerCase().contains(searchBox.getValue().toLowerCase()));
 	private int visibleSlotsCount;
@@ -130,6 +131,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 
 		imageWidth = storageBackgroundProperties.getSlotsOnLine() * 18 + 14;
 		updateStorageSlotsPositions();
+		updateNoResultsLabel();
 		if (displayableNumberOfRows < getMenu().getNumberOfRows()) {
 			storageBackgroundProperties = storageBackgroundProperties == StorageBackgroundProperties.REGULAR_9_SLOT ? StorageBackgroundProperties.WIDER_9_SLOT : StorageBackgroundProperties.WIDER_12_SLOT;
 			imageWidth += 6;
@@ -160,6 +162,28 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 		}
 	}
 
+	private void updateNoResultsLabel() {
+		if (noResultsLabel != null) {
+			if (visibleSlotsCount == 0) {
+				if (!renderables.contains(noResultsLabel)) {
+					addRenderableWidget(noResultsLabel);
+				}
+			} else {
+				removeWidget(noResultsLabel);
+			}
+		}
+	}
+
+	@Override
+	public int getVisibleSlotsCount() {
+		return visibleSlotsCount;
+	}
+
+	@Override
+	public void setVisibleSlotsCount(int visibleSlotsCount) {
+		this.visibleSlotsCount = visibleSlotsCount;
+	}
+
 	protected void updateStorageSlotsPositions() {
 		int yPosition = 18;
 
@@ -180,7 +204,6 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			} else {
 				slot.x = DISABLED_SLOT_X_POS;
 			}
-
 		}
 	}
 
@@ -228,6 +251,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			updatePlayerSlotsPositions();
 			updateUpgradeSlotsPositions();
 			updateInventoryScrollPanel();
+			updateNoResultsLabel();
 			children().remove(settingsTabControl);
 			craftingUIPart.onCraftingSlotsHidden();
 			initUpgradeSettingsControl();
@@ -256,6 +280,11 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			searchBox.setValue(getMenu().getSearchPhrase());
 		}
 		addRenderableWidget(searchBox);
+
+		noResultsLabel = new Label(new Position(leftPos + 7, topPos + 18), Component.translatable(TranslationHelper.INSTANCE.translGui("label.no_search_results")));
+		if (visibleSlotsCount == 0) {
+			addRenderableWidget(noResultsLabel);
+		}
 	}
 
 	private void onSearchPhraseChange(String searchPhrase) {
@@ -269,6 +298,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 		} else {
 			updateStorageSlotsPositions();
 		}
+		updateNoResultsLabel();
 	}
 
 	private void updateSearchFilter(String searchPhrase) {
@@ -436,6 +466,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			updateStorageSlotsPositions();
 			updatePlayerSlotsPositions();
 			updateInventoryScrollPanel();
+			updateNoResultsLabel();
 			updateTransferButtonsPositions();
 		}
 		PoseStack poseStack = guiGraphics.pose();
