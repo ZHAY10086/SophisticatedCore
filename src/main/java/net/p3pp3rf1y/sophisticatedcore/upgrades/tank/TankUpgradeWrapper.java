@@ -270,8 +270,6 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 
 		@Override
 		public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-
-
 			if (slot == INPUT_SLOT) {
 				return stack.isEmpty() ||  isValidFluidItem(stack, false) || ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS.stream().anyMatch(alt -> stack.getItem() == alt.filledItem && alt.tankContentsEmptyOrMatch(contents) || stack.getItem() == alt.emptyItem);
 			} else if (slot == OUTPUT_SLOT) {
