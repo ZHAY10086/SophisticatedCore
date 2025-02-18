@@ -273,7 +273,7 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 			if (slot == INPUT_SLOT) {
 				return stack.isEmpty() ||  isValidFluidItem(stack, false) || ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS.stream().anyMatch(alt -> stack.getItem() == alt.filledItem && alt.tankContentsEmptyOrMatch(contents) || stack.getItem() == alt.emptyItem);
 			} else if (slot == OUTPUT_SLOT) {
-				return stack.isEmpty() ||  isValidFluidItem(stack, false) || ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS.stream().anyMatch(alt -> stack.getItem() == alt.emptyItem && alt.tankContentsMatch(contents) || stack.getItem() == alt.filledItem);
+				return stack.isEmpty() ||  isValidFluidItem(stack, true) || ALTERNATIVE_FLUID_CONTAINER_DEFINITIONS.stream().anyMatch(alt -> stack.getItem() == alt.emptyItem && alt.tankContentsMatch(contents) || stack.getItem() == alt.filledItem);
 			}
 			return false;
 		}
