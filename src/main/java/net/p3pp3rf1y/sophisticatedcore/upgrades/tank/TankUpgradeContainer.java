@@ -27,6 +27,8 @@ public class TankUpgradeContainer extends UpgradeContainerBase<TankUpgradeWrappe
 				.setBackground(InventoryMenu.BLOCK_ATLAS, EMPTY_TANK_INPUT_SLOT_BACKGROUND));
 		slots.add(new TankIOSlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.OUTPUT_SLOT, -100, -100, TranslationHelper.INSTANCE.translUpgradeSlotTooltip("tank_output"))
 				.setBackground(InventoryMenu.BLOCK_ATLAS, EMPTY_TANK_OUTPUT_SLOT_BACKGROUND));
+		slots.add(new TakeOnlySlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.INPUT_RESULT_SLOT, -100, -100));
+		slots.add(new TakeOnlySlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.OUTPUT_RESULT_SLOT, -100, -100));
 	}
 
 	@Override
@@ -63,6 +65,17 @@ public class TankUpgradeContainer extends UpgradeContainerBase<TankUpgradeWrappe
 		@Override
 		public boolean mayPlace(ItemStack stack) {
 			return getItemHandler().isItemValid(getSlotIndex(), stack);
+		}
+	}
+
+	private static class TakeOnlySlot extends SlotSuppliedHandler {
+		public TakeOnlySlot(Supplier<IItemHandler> itemHandlerSupplier, int slot, int xPosition, int yPosition) {
+			super(itemHandlerSupplier, slot, xPosition, yPosition);
+		}
+
+		@Override
+		public boolean mayPlace(ItemStack stack) {
+			return false;
 		}
 	}
 }

@@ -5,9 +5,6 @@ import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.network.NetworkEvent;
 import net.p3pp3rf1y.sophisticatedcore.common.gui.StorageContainerMenuBase;
 import net.p3pp3rf1y.sophisticatedcore.common.gui.UpgradeContainerBase;
@@ -46,26 +43,15 @@ public class TankClickMessage {
 			return;
 		}
 		ItemStack cursorStack = containerMenu.getCarried();
-		cursorStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).ifPresent(fluidHandler -> {
-			TankUpgradeWrapper tankWrapper = tankContainer.getUpgradeWrapper();
-			FluidStack tankContents = tankWrapper.getContents();
-			if (tankContents.isEmpty()) {
-				drainHandler(sender, containerMenu, fluidHandler, tankWrapper);
-			} else {
-				if (!tankWrapper.fillHandler(fluidHandler, itemStackIn -> {
-					containerMenu.setCarried(itemStackIn);
-					sender.connection.send(new ClientboundContainerSetSlotPacket(-1, containerMenu.incrementStateId(), -1, containerMenu.getCarried()));
-				})) {
-					drainHandler(sender, containerMenu, fluidHandler, tankWrapper);
-				}
-			}
-		});
-	}
+		if (cursorStack.getCount() > 1) {
+			return;
+		}
 
-	private static void drainHandler(ServerPlayer sender, AbstractContainerMenu containerMenu, IFluidHandlerItem fluidHandler, TankUpgradeWrapper tankWrapper) {
-		tankWrapper.drainHandler(fluidHandler, itemStackIn -> {
-			containerMenu.setCarried(itemStackIn);
+		TankUpgradeWrapper tankWrapper = tankContainer.getUpgradeWrapper();
+		tankWrapper.interactWithCursorStack(cursorStack, stack -> {
+			containerMenu.setCarried(stack);
 			sender.connection.send(new ClientboundContainerSetSlotPacket(-1, containerMenu.incrementStateId(), -1, containerMenu.getCarried()));
 		});
 	}
+
 }
