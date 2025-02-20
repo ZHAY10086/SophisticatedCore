@@ -37,7 +37,7 @@ public interface IUpgradeItem<T extends IUpgradeWrapper> {
 			return result;
 		}
 
-		return checkExtraInsertConditions(upgradeStack, storageWrapper, isClientSide, null);
+		return checkExtraInsertConditions(upgradeStack, storageWrapper, isClientSide, -1, null);
 	}
 
 	default UpgradeSlotChangeResult checkThisForConflictsWithExistingUpgrades(ItemStack upgradeStack, IStorageWrapper storageWrapper, int excludeUpgradeSlot) {
@@ -151,10 +151,14 @@ public interface IUpgradeItem<T extends IUpgradeWrapper> {
 			if (!result.isSuccessful()) {
 				return result;
 			}
-			return upgradeToPut.checkExtraInsertConditions(upgradeStackToPut, storageWrapper, isClientSide, this);
+			return upgradeToPut.checkExtraInsertConditions(upgradeStackToPut, storageWrapper, isClientSide, upgradeSlot, this);
 		}
 
 		return new UpgradeSlotChangeResult.Success();
+	}
+
+	default UpgradeSlotChangeResult checkExtraInsertConditions(ItemStack upgradeStack, IStorageWrapper storageWrapper, boolean isClientSide, int upgradeSlot, @Nullable IUpgradeItem<?> upgradeInSlot) {
+		return checkExtraInsertConditions(upgradeStack, storageWrapper, isClientSide, upgradeInSlot);
 	}
 
 	default UpgradeSlotChangeResult checkExtraInsertConditions(ItemStack upgradeStack, IStorageWrapper storageWrapper, boolean isClientSide, @Nullable IUpgradeItem<?> upgradeInSlot) {

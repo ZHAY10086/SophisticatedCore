@@ -5,10 +5,11 @@ import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.TranslationHelper;
 import net.p3pp3rf1y.sophisticatedcore.common.gui.UpgradeSlotChangeResult;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.*;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -65,18 +66,18 @@ public class StackUpgradeItem extends UpgradeItemBase<StackUpgradeItem.Wrapper> 
 		}
 
 		double multiplierWhenRemoved = getInventorySlotLimit(storageWrapper, stackSizeMultiplier) / 64D;
-		return isMultiplierHighEnough(storageWrapper, multiplierWhenRemoved);
+		return isMultiplierHighEnough(storageWrapper, multiplierWhenRemoved, -1);
 	}
 
 	@Override
-	public UpgradeSlotChangeResult canAddUpgradeTo(IStorageWrapper storageWrapper, ItemStack upgradeStack, boolean firstLevelStorage, boolean isClientSide) {
+	public UpgradeSlotChangeResult checkExtraInsertConditions(ItemStack upgradeStack, IStorageWrapper storageWrapper, boolean isClientSide, int upgradeSlot, @Nullable IUpgradeItem<?> upgradeInSlot) {
 		double multiplierWhenAdded = getInventorySlotLimit(storageWrapper) / 64D * stackSizeMultiplier;
-		UpgradeSlotChangeResult result = isMultiplierHighEnough(storageWrapper, multiplierWhenAdded);
+		UpgradeSlotChangeResult result = isMultiplierHighEnough(storageWrapper, multiplierWhenAdded, upgradeSlot);
 		if (!result.isSuccessful()) {
 			return result;
 		}
 
-		return super.canAddUpgradeTo(storageWrapper, upgradeStack, firstLevelStorage, isClientSide);
+		return super.checkExtraInsertConditions(upgradeStack, storageWrapper, isClientSide, upgradeInSlot);
 	}
 
 	@Override
@@ -100,10 +101,10 @@ public class StackUpgradeItem extends UpgradeItemBase<StackUpgradeItem.Wrapper> 
 
 		double multiplierWhenRemoved = getInventorySlotLimit(storageWrapper, stackSizeMultiplier) / 64D;
 
-		return isMultiplierHighEnough(storageWrapper, multiplierWhenRemoved * otherStackUpgradeItem.stackSizeMultiplier);
+		return isMultiplierHighEnough(storageWrapper, multiplierWhenRemoved * otherStackUpgradeItem.stackSizeMultiplier, -1);
 	}
 
-	private UpgradeSlotChangeResult isMultiplierHighEnough(IStorageWrapper storageWrapper, double multiplier) {
+	private UpgradeSlotChangeResult isMultiplierHighEnough(IStorageWrapper storageWrapper, double multiplier, int ignoreUpgradeSlot) {
 		Set<Integer> slotsOverMultiplier = new HashSet<>();
 
 		for (int slot = 0; slot < storageWrapper.getInventoryHandler().getSlots(); slot++) {
@@ -117,16 +118,22 @@ public class StackUpgradeItem extends UpgradeItemBase<StackUpgradeItem.Wrapper> 
 			}
 		}
 
+		Set<Integer> errorUpgradeSlots = new HashSet<>();
 		Set<Integer> errorInventoryParts = new HashSet<>();
-
-		storageWrapper.getUpgradeHandler().getSlotWrappers().forEach((slot, wrapper) -> {
+		for (Map.Entry<Integer, IUpgradeWrapper> entry : storageWrapper.getUpgradeHandler().getSlotWrappers().entrySet()) {
+			Integer slot = entry.getKey();
+			IUpgradeWrapper wrapper = entry.getValue();
+			if (slot == ignoreUpgradeSlot) {
+				continue;
+			}
 			if (wrapper instanceof IStackableContentsUpgrade stackableContentsUpgrade && stackableContentsUpgrade.getMinimumMultiplierRequired() > multiplier) {
+				errorUpgradeSlots.add(slot);
 				errorInventoryParts.add(slot);
 			}
-		});
+		}
 
 		if (!slotsOverMultiplier.isEmpty() || !errorInventoryParts.isEmpty()) {
-			return new UpgradeSlotChangeResult.Fail(TranslationHelper.INSTANCE.translError("remove.stack_low_multiplier", multiplier), Collections.emptySet(), slotsOverMultiplier, errorInventoryParts);
+			return new UpgradeSlotChangeResult.Fail(TranslationHelper.INSTANCE.translError("remove.stack_low_multiplier", multiplier), errorUpgradeSlots, slotsOverMultiplier, errorInventoryParts);
 		}
 
 		return new UpgradeSlotChangeResult.Success();

@@ -1067,11 +1067,9 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 				}
 			});
 			upgradeSlotChangeResult.getErrorInventoryParts().forEach(partIndex -> {
-				if (inventoryParts.size() > partIndex) {
-					UpgradeInventoryPartBase<?> inventoryPart = inventoryParts.get(partIndex);
-					if (inventoryPart != null) {
-						inventoryPart.renderErrorOverlay(guiGraphics);
-					}
+				UpgradeInventoryPartBase<?> inventoryPart = inventoryParts.get(partIndex);
+				if (inventoryPart != null) {
+					inventoryPart.renderErrorOverlay(guiGraphics);
 				}
 			});
 			poseStack.popPose();
