@@ -6,14 +6,18 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidType;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.init.ModFluids;
@@ -25,6 +29,8 @@ import net.p3pp3rf1y.sophisticatedcore.util.NBTHelper;
 import net.p3pp3rf1y.sophisticatedcore.util.XpHelper;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -42,9 +48,12 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 	private FluidStack contents;
 	private long cooldownTime = 0;
 
-	private static final Map<Item, Function<ItemStack, IFluidHandlerItem>> CUSTOM_FLUIDHANDLER_FACTORIES = Map.of(
-			Items.EXPERIENCE_BOTTLE, stack -> new SwapEmptyFluidContainerHandler.Full(stack, Items.GLASS_BOTTLE, Items.EXPERIENCE_BOTTLE, XpHelper.experienceToLiquid(8), ModFluids.XP_STILL.get()),
-			Items.GLASS_BOTTLE, stack -> new SwapEmptyFluidContainerHandler.Empty(stack, Items.GLASS_BOTTLE, Items.EXPERIENCE_BOTTLE, XpHelper.experienceToLiquid(8), ModFluids.XP_STILL.get())
+	private static final Map<ItemStack, Function<ItemStack, IFluidHandlerItem>> CUSTOM_FLUIDHANDLER_FACTORIES = Map.of(
+			new ItemStack(Items.EXPERIENCE_BOTTLE), stack -> new SwapEmptyFluidContainerHandler.Full(stack, Items.GLASS_BOTTLE, new ItemStack(Items.EXPERIENCE_BOTTLE), XpHelper.experienceToLiquid(8), ModFluids.XP_STILL.get()),
+			PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.WATER), stack -> new SwapEmptyFluidContainerHandler.Full(stack, Items.GLASS_BOTTLE, PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.WATER), 250, Fluids.WATER),
+			new ItemStack(Items.GLASS_BOTTLE), stack -> new SwapEmptyFluidContainerHandler.Empty(stack, Items.GLASS_BOTTLE,
+					new SwapEmptyFluidContainerHandler.FullContainerDefinition(new ItemStack(Items.EXPERIENCE_BOTTLE), XpHelper.experienceToLiquid(8), ModFluids.XP_STILL.get()),
+					new SwapEmptyFluidContainerHandler.FullContainerDefinition(PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.WATER), 250, Fluids.WATER))
 	);
 
 	protected TankUpgradeWrapper(IStorageWrapper storageWrapper, ItemStack upgrade, Consumer<ItemStack> upgradeSaveHandler) {
@@ -253,7 +262,7 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 	}
 
 	private static Optional<IFluidHandlerItem> getCustomFluidHandler(ItemStack stack) {
-		return CUSTOM_FLUIDHANDLER_FACTORIES.entrySet().stream().filter(e -> stack.getItem() == e.getKey()).map(e -> e.getValue().apply(stack)).findFirst();
+		return CUSTOM_FLUIDHANDLER_FACTORIES.entrySet().stream().filter(e -> ItemHandlerHelper.canItemStacksStack(stack, e.getKey())).map(e -> e.getValue().apply(stack)).findFirst();
 	}
 
 	public boolean fillHandler(IFluidHandlerItem fluidHandler, Consumer<ItemStack> updateContainerStack, boolean moveFullToResult, boolean simulateIncludingFullFill) {
@@ -374,30 +383,26 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 	private static abstract class SwapEmptyFluidContainerHandler implements IFluidHandlerItem {
 		private ItemStack container;
 		private final Item empty;
-		private final Item full;
+		private final Map<FluidStack, FullContainerDefinition> fullContainers = new HashMap<>();
 		private FluidStack contents;
-		private final int capacity;
-		private final FluidStack validFluid;
 
 		public static class Empty extends SwapEmptyFluidContainerHandler {
-			public Empty(ItemStack container, Item empty, Item full, int capacity, Fluid validFluid) {
-				super(container, empty, full, FluidStack.EMPTY, capacity, new FluidStack(validFluid, capacity));
+			public Empty(ItemStack container, Item empty, FullContainerDefinition... fullContainers) {
+				super(container, empty, FluidStack.EMPTY, fullContainers);
 			}
 		}
 
 		public static class Full extends SwapEmptyFluidContainerHandler {
-			public Full(ItemStack container, Item empty, Item full, int capacity, Fluid validFluid) {
-				super(container, empty, full, new FluidStack(validFluid, capacity), capacity, new FluidStack(validFluid, capacity));
+			public Full(ItemStack container, Item empty, ItemStack full, int capacity, Fluid validFluid) {
+				super(container, empty, new FluidStack(validFluid, capacity), new FullContainerDefinition(full, capacity, new FluidStack(validFluid, capacity)));
 			}
 		}
 
-		protected SwapEmptyFluidContainerHandler(ItemStack container, Item empty, Item full, FluidStack contents, int capacity, FluidStack validFluid) {
+		protected SwapEmptyFluidContainerHandler(ItemStack container, Item empty, FluidStack contents, FullContainerDefinition... fullContainers) {
 			this.container = container;
 			this.empty = empty;
-			this.full = full;
+			Arrays.stream(fullContainers).forEach(fc -> this.fullContainers.put(fc.validFluid, fc));
 			this.contents = contents;
-			this.capacity = capacity;
-			this.validFluid = validFluid;
 		}
 
 		@Override
@@ -417,12 +422,17 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 
 		@Override
 		public int getTankCapacity(int tank) {
-			return capacity;
+			return getMatchingDefinition().map(FullContainerDefinition::capacity)
+					.orElseGet(() -> fullContainers.values().stream().mapToInt(FullContainerDefinition::capacity).max().orElse(0));
+		}
+
+		private Optional<FullContainerDefinition> getMatchingDefinition() {
+			return fullContainers.entrySet().stream().filter(e -> e.getKey().isFluidEqual(contents)).map(Map.Entry::getValue).findFirst();
 		}
 
 		@Override
 		public boolean isFluidValid(int i, FluidStack fluidStack) {
-			return validFluid.isFluidEqual(fluidStack);
+			return !contents.isEmpty() ? contents.isFluidEqual(fluidStack) : fullContainers.keySet().stream().anyMatch(validFluid -> validFluid.isFluidEqual(fluidStack));
 		}
 
 		@Override
@@ -431,43 +441,58 @@ public class TankUpgradeWrapper extends UpgradeWrapperBase<TankUpgradeWrapper, T
 				return 0;
 			}
 
-			int result = 0;
-			if (fluidStack.getAmount() >= capacity) {
-				result = capacity;
-				if (fluidAction == FluidAction.EXECUTE) {
-					container = new ItemStack(full);
-					contents = new FluidStack(fluidStack, capacity);
-				}
-			}
 
-			return result;
+			return findFirstFullContainer(fluidStack).map(fullContainer -> {
+				int result = 0;
+				int capacity = fullContainer.capacity();
+				if (fluidStack.getAmount() >= capacity) {
+					result = capacity;
+					if (fluidAction == FluidAction.EXECUTE) {
+						container = fullContainer.full().copy();
+						contents = new FluidStack(fluidStack, capacity);
+					}
+				}
+				return result;
+			}).orElse(0);
+		}
+
+		private Optional<FullContainerDefinition> findFirstFullContainer(FluidStack fluidStack) {
+			return fullContainers.entrySet().stream().filter(e -> e.getKey().isFluidEqual(fluidStack)).findFirst().map(Map.Entry::getValue);
 		}
 
 		@Override
 		public FluidStack drain(FluidStack fluidStack, FluidAction fluidAction) {
-			if (fluidStack.isEmpty() || container.getItem() != full) {
-				return FluidStack.EMPTY;
-			}
-
-			FluidStack result = FluidStack.EMPTY;
-			if (isFluidValid(0, fluidStack) && fluidStack.getAmount() >= capacity) {
-				result = new FluidStack(fluidStack, capacity);
-				if (fluidAction == FluidAction.EXECUTE) {
-					container = new ItemStack(empty);
-					contents = FluidStack.EMPTY;
+			return findFirstFullContainer(contents).map(fullContainer -> {
+				if (fluidStack.isEmpty() || !ItemHandlerHelper.canItemStacksStack(container, fullContainer.full())) {
+					return FluidStack.EMPTY;
 				}
-			}
 
-			return result;
+				FluidStack result = FluidStack.EMPTY;
+				if (isFluidValid(0, fluidStack) && fluidStack.getAmount() >= fullContainer.capacity()) {
+					result = new FluidStack(fluidStack, fullContainer.capacity());
+					if (fluidAction == FluidAction.EXECUTE) {
+						container = new ItemStack(empty);
+						contents = FluidStack.EMPTY;
+					}
+				}
+
+				return result;
+			}).orElse(FluidStack.EMPTY);
 		}
 
 		@Override
 		public FluidStack drain(int toDrain, FluidAction fluidAction) {
-			if (container.getItem() != full || toDrain < capacity) {
+			if (container.getItem() == empty || toDrain < contents.getAmount()) {
 				return FluidStack.EMPTY;
 			}
 
 			return drain(contents, fluidAction);
+		}
+
+		private record FullContainerDefinition(ItemStack full, int capacity, FluidStack validFluid) {
+			public FullContainerDefinition(ItemStack full, int capacity, Fluid validFluid) {
+				this(full, capacity, new FluidStack(validFluid, capacity));
+			}
 		}
 	}
 
