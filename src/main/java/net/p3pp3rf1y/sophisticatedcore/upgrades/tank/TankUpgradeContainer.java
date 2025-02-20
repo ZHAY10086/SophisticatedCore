@@ -22,18 +22,12 @@ public class TankUpgradeContainer extends UpgradeContainerBase<TankUpgradeWrappe
 
 	public TankUpgradeContainer(Player player, int upgradeContainerId, TankUpgradeWrapper upgradeWrapper, UpgradeContainerType<TankUpgradeWrapper, TankUpgradeContainer> type) {
 		super(player, upgradeContainerId, upgradeWrapper, type);
-		slots.add(new TankIOSlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.INPUT_SLOT, -100, -100, TranslationHelper.INSTANCE.translUpgradeSlotTooltip("tank_input")) {
-			@Override
-			public int getMaxStackSize(ItemStack stack) {
-				return 1;
-			}
-		}.setBackground(InventoryMenu.BLOCK_ATLAS, EMPTY_TANK_INPUT_SLOT_BACKGROUND));
-		slots.add(new TankIOSlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.OUTPUT_SLOT, -100, -100, TranslationHelper.INSTANCE.translUpgradeSlotTooltip("tank_output")) {
-			@Override
-			public int getMaxStackSize(ItemStack stack) {
-				return 1;
-			}
-		}.setBackground(InventoryMenu.BLOCK_ATLAS, EMPTY_TANK_OUTPUT_SLOT_BACKGROUND));
+		slots.add(new TankIOSlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.INPUT_SLOT, -100, -100, TranslationHelper.INSTANCE.translUpgradeSlotTooltip("tank_input"))
+				.setBackground(InventoryMenu.BLOCK_ATLAS, EMPTY_TANK_INPUT_SLOT_BACKGROUND));
+		slots.add(new TankIOSlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.OUTPUT_SLOT, -100, -100, TranslationHelper.INSTANCE.translUpgradeSlotTooltip("tank_output"))
+				.setBackground(InventoryMenu.BLOCK_ATLAS, EMPTY_TANK_OUTPUT_SLOT_BACKGROUND));
+		slots.add(new TakeOnlySlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.INPUT_RESULT_SLOT, -100, -100));
+		slots.add(new TakeOnlySlot(() -> this.upgradeWrapper.getInventory(), TankUpgradeWrapper.OUTPUT_RESULT_SLOT, -100, -100));
 	}
 
 	@Override
@@ -71,7 +65,18 @@ public class TankUpgradeContainer extends UpgradeContainerBase<TankUpgradeWrappe
 
 		@Override
 		public boolean mayPlace(ItemStack stack) {
-			return itemHandlerSupplier.get().isItemValidForPlacement(getSlotIndex(), stack);
+			return itemHandlerSupplier.get().isItemValid(getSlotIndex(), stack);
+		}
+	}
+
+	private static class TakeOnlySlot extends SlotSuppliedHandler {
+		public TakeOnlySlot(Supplier<TankUpgradeWrapper.TankComponentItemHandler> itemHandlerSupplier, int slot, int xPosition, int yPosition) {
+			super(itemHandlerSupplier::get, slot, xPosition, yPosition);
+		}
+
+		@Override
+		public boolean mayPlace(ItemStack stack) {
+			return false;
 		}
 	}
 }
