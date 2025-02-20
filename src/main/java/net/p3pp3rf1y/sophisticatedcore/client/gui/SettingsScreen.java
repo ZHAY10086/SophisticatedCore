@@ -32,6 +32,7 @@ public abstract class SettingsScreen extends AbstractContainerScreen<SettingsCon
 	private TemplatePersistanceControl templatePersistanceControl = null;
 	private StorageBackgroundProperties storageBackgroundProperties;
 	private boolean mouseDragHandledByOther = false;
+	private int visibleSlotsCount;
 
 	protected SettingsScreen(SettingsContainerMenu<?> screenContainer, Inventory inv, Component titleIn) {
 		super(screenContainer, inv, titleIn);
@@ -78,6 +79,16 @@ public abstract class SettingsScreen extends AbstractContainerScreen<SettingsCon
 		} else {
 			inventoryScrollPanel = null;
 		}
+	}
+
+	@Override
+	public int getVisibleSlotsCount() {
+		return visibleSlotsCount;
+	}
+
+	@Override
+	public void setVisibleSlotsCount(int visibleSlotsCount) {
+		this.visibleSlotsCount = visibleSlotsCount;
 	}
 
 	private int getNumberOfVisibleRows() {
