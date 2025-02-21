@@ -120,7 +120,6 @@ public class StackUpgradeItem extends UpgradeItemBase<StackUpgradeItem.Wrapper> 
 
 		Set<Integer> errorUpgradeSlots = new HashSet<>();
 		Set<Integer> errorInventoryParts = new HashSet<>();
-		int inventoryPartIndex = 0;
 		for (Map.Entry<Integer, IUpgradeWrapper> entry : storageWrapper.getUpgradeHandler().getSlotWrappers().entrySet()) {
 			Integer slot = entry.getKey();
 			IUpgradeWrapper wrapper = entry.getValue();
