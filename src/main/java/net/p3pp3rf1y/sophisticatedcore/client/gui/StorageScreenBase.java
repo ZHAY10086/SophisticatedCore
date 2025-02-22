@@ -24,7 +24,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.DyeColor;
@@ -92,6 +91,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 	@Nullable
 	private Button transferToInventoryButton;
 	private TextBox searchBox;
+	private Label noResultsLabel;
 	private Predicate<ItemStack> stackFilter = stack -> searchBox == null || searchBox.getValue().isEmpty()
 			|| (!stack.isEmpty() && stack.getHoverName().getString().toLowerCase().contains(searchBox.getValue().toLowerCase()));
 	private int visibleSlotsCount;
@@ -129,6 +129,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 
 		imageWidth = storageBackgroundProperties.getSlotsOnLine() * 18 + 14;
 		updateStorageSlotsPositions();
+		updateNoResultsLabel();
 		if (displayableNumberOfRows < getMenu().getNumberOfRows()) {
 			storageBackgroundProperties = storageBackgroundProperties == StorageBackgroundProperties.REGULAR_9_SLOT ? StorageBackgroundProperties.WIDER_9_SLOT : StorageBackgroundProperties.WIDER_12_SLOT;
 			imageWidth += 6;
@@ -159,6 +160,28 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 		}
 	}
 
+	private void updateNoResultsLabel() {
+		if (noResultsLabel != null) {
+			if (visibleSlotsCount == 0) {
+				if (!renderables.contains(noResultsLabel)) {
+					addRenderableWidget(noResultsLabel);
+				}
+			} else {
+				removeWidget(noResultsLabel);
+			}
+		}
+	}
+
+	@Override
+	public int getVisibleSlotsCount() {
+		return visibleSlotsCount;
+	}
+
+	@Override
+	public void setVisibleSlotsCount(int visibleSlotsCount) {
+		this.visibleSlotsCount = visibleSlotsCount;
+	}
+
 	protected void updateStorageSlotsPositions() {
 		int yPosition = 18;
 
@@ -179,7 +202,6 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			} else {
 				slot.x = DISABLED_SLOT_X_POS;
 			}
-
 		}
 	}
 
@@ -227,6 +249,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			updatePlayerSlotsPositions();
 			updateUpgradeSlotsPositions();
 			updateInventoryScrollPanel();
+			updateNoResultsLabel();
 			children().remove(settingsTabControl);
 			craftingUIPart.onCraftingSlotsHidden();
 			initUpgradeSettingsControl();
@@ -255,6 +278,11 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			searchBox.setValue(getMenu().getSearchPhrase());
 		}
 		addRenderableWidget(searchBox);
+
+		noResultsLabel = new Label(new Position(leftPos + 7, topPos + 18), Component.translatable(TranslationHelper.INSTANCE.translGui("label.no_search_results")));
+		if (visibleSlotsCount == 0) {
+			addRenderableWidget(noResultsLabel);
+		}
 	}
 
 	private void onSearchPhraseChange(String searchPhrase) {
@@ -268,6 +296,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 		} else {
 			updateStorageSlotsPositions();
 		}
+		updateNoResultsLabel();
 	}
 
 	private void updateSearchFilter(String searchPhrase) {
@@ -435,6 +464,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			updateStorageSlotsPositions();
 			updatePlayerSlotsPositions();
 			updateInventoryScrollPanel();
+			updateNoResultsLabel();
 			updateTransferButtonsPositions();
 		}
 		PoseStack poseStack = guiGraphics.pose();
@@ -587,7 +617,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 			if (StorageContainerMenuBase.canItemQuickReplace(slot, carriedStack) && menu.canDragTo(slot)) {
 				flag = true;
 				int slotStackCount = stackToRender.isEmpty() ? 0 : stackToRender.getCount();
-				int renderCount = AbstractContainerMenu.getQuickCraftPlaceCount(quickCraftSlots, quickCraftingType, carriedStack) + slotStackCount;
+				int renderCount = StorageContainerMenuBase.getQuickCraftPlaceCount(slot, quickCraftSlots.size(), quickCraftingType, carriedStack) + slotStackCount;
 				int slotLimit = stackToRender.isEmpty() ? 64 : slot.getMaxStackSize(stackToRender);
 				if (renderCount > slotLimit) {
 					stackCountText = ChatFormatting.YELLOW + CountAbbreviator.abbreviate(slotLimit);
@@ -631,19 +661,22 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 
 	private void renderSlotBackground(GuiGraphics guiGraphics, Slot slot, int i, int j) {
 		Optional<ItemStack> memorizedStack = getMenu().getMemorizedStackInSlot(slot.index);
-		if (memorizedStack.isPresent()) {
-			guiGraphics.renderItem(memorizedStack.get(), i, j);
-			drawStackOverlay(guiGraphics, i, j);
-		} else if (!getMenu().getSlotFilterItem(slot.index).isEmpty()) {
-			guiGraphics.renderItem(getMenu().getSlotFilterItem(slot.index), i, j);
-			drawStackOverlay(guiGraphics, i, j);
-		} else {
-			Pair<ResourceLocation, ResourceLocation> pair = slot.getNoItemIcon();
-			if (pair != null) {
-				//noinspection ConstantConditions - by this point minecraft isn't null
-				TextureAtlasSprite textureatlassprite = minecraft.getTextureAtlas(pair.getFirst()).apply(pair.getSecond());
-				guiGraphics.blit(i, j, 0, 16, 16, textureatlassprite);
+		if (getMenu().isStorageInventorySlot(slot.index)) {
+			if (memorizedStack.isPresent()) {
+				guiGraphics.renderItem(memorizedStack.get(), i, j);
+				drawStackOverlay(guiGraphics, i, j);
+				return;
+			} else if (!getMenu().getSlotFilterItem(slot.index).isEmpty()) {
+				guiGraphics.renderItem(getMenu().getSlotFilterItem(slot.index), i, j);
+				drawStackOverlay(guiGraphics, i, j);
+				return;
 			}
+		}
+		Pair<ResourceLocation, ResourceLocation> pair = slot.getNoItemIcon();
+		if (pair != null) {
+			//noinspection ConstantConditions - by this point minecraft isn't null
+			TextureAtlasSprite textureatlassprite = minecraft.getTextureAtlas(pair.getFirst()).apply(pair.getSecond());
+			guiGraphics.blit(i, j, 0, 16, 16, textureatlassprite);
 		}
 	}
 
@@ -744,7 +777,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 	@Override
 	protected List<Component> getTooltipFromContainerItem(ItemStack itemStack) {
 		List<Component> ret = getTooltipFromItem(minecraft, itemStack);
-		if (hoveredSlot != null && hoveredSlot.getMaxStackSize() > 99) {
+		if (hoveredSlot != null && hoveredSlot instanceof StorageInventorySlot && hoveredSlot.getMaxStackSize() != itemStack.getMaxStackSize()) {
 			ret.add(Component.translatable(TranslationHelper.INSTANCE.translGuiTooltip("stack_count"),
 							Component.literal(NumberFormat.getNumberInstance().format(itemStack.getCount())).withStyle(ChatFormatting.DARK_AQUA)
 									.append(Component.literal(" / ").withStyle(ChatFormatting.GRAY))
@@ -1004,7 +1037,7 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 					ItemStack slotStack = slot.getItem();
 					int slotStackCount = slotStack.isEmpty() ? 0 : slotStack.getCount();
 					int maxStackSize = slot.getMaxStackSize(carriedStack);
-					int quickCraftPlaceCount = Math.min(AbstractContainerMenu.getQuickCraftPlaceCount(quickCraftSlots, quickCraftingType, carriedStack) + slotStackCount, maxStackSize);
+					int quickCraftPlaceCount = Math.min(StorageContainerMenuBase.getQuickCraftPlaceCount(slot, quickCraftSlots.size(), quickCraftingType, carriedStack) + slotStackCount, maxStackSize);
 					quickCraftingRemainder -= quickCraftPlaceCount - slotStackCount;
 				}
 			}
@@ -1029,11 +1062,9 @@ public abstract class StorageScreenBase<S extends StorageContainerMenuBase<?>> e
 				}
 			});
 			upgradeSlotChangeResult.errorInventoryParts().forEach(partIndex -> {
-				if (inventoryParts.size() > partIndex) {
-					UpgradeInventoryPartBase<?> inventoryPart = inventoryParts.get(partIndex);
-					if (inventoryPart != null) {
-						inventoryPart.renderErrorOverlay(guiGraphics);
-					}
+				UpgradeInventoryPartBase<?> inventoryPart = inventoryParts.get(partIndex);
+				if (inventoryPart != null) {
+					inventoryPart.renderErrorOverlay(guiGraphics);
 				}
 			});
 			poseStack.popPose();

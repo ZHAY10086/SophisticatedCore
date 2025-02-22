@@ -13,6 +13,7 @@ import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.p3pp3rf1y.sophisticatedcore.client.ClientEventHandler;
 import net.p3pp3rf1y.sophisticatedcore.common.CommonEventHandler;
 import net.p3pp3rf1y.sophisticatedcore.compat.CompatRegistry;
@@ -61,8 +62,9 @@ public class SophisticatedCore {
 		}
 	}
 
-	private static void serverStopped(ServerStartedEvent event) {
+	private static void serverStopped(ServerStoppedEvent event) {
 		StorageWrapperRepository.clearCache();
+		RecipeHelper.clearListeners();
 	}
 
 	private static void construct(FMLConstructModEvent event, IEventBus modBus) {

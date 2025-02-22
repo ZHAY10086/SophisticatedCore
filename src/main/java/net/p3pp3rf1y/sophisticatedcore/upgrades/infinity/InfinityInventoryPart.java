@@ -24,6 +24,13 @@ public abstract class InfinityInventoryPart implements IInventoryPartHandler {
 		this.parent = parent;
 		this.slotRange = slotRange;
 		this.permissionLevel = permissionLevel;
+		parent.addListener(this::onParentSlotChanged);
+	}
+
+	private void onParentSlotChanged(int slot) {
+		if (slotRange.isInRange(slot)) {
+			cachedStacks.remove(slot);
+		}
 	}
 
 	@Override
@@ -68,7 +75,6 @@ public abstract class InfinityInventoryPart implements IInventoryPartHandler {
 	@Override
 	public void setStackInSlot(int slot, ItemStack stack, BiConsumer<Integer, ItemStack> setStackInSlotSuper) {
 		if (parent.getSlotStack(slot).isEmpty()) {
-			cachedStacks.remove(slot);
 			parent.setSlotStack(slot, stack);
 		}
 	}

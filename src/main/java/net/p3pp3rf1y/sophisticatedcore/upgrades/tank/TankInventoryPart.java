@@ -9,7 +9,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -70,7 +69,7 @@ public class TankInventoryPart extends UpgradeInventoryPartBase<TankUpgradeConta
 		}
 
 		ItemStack cursorStack = screen.getMenu().getCarried();
-		if (cursorStack.getCount() > 1 || cursorStack.getCapability(Capabilities.FluidHandler.ITEM) == null) {
+		if (cursorStack.getCount() > 1) {
 			return false;
 		}
 

@@ -30,7 +30,7 @@ public class CompactingUpgradeWrapper extends UpgradeWrapperBase<CompactingUpgra
 		super(storageWrapper, upgrade, upgradeSaveHandler);
 
 		filterLogic = new FilterLogic(upgrade, upgradeSaveHandler, upgradeItem.getFilterSlotCount(),
-				stack -> stack.getComponentsPatch().isEmpty() && !RecipeHelper.getItemCompactingShapes(stack).isEmpty(),
+				stack -> RecipeHelper.getItemCompactingShapes(stack).stream().anyMatch(shape -> shape != CompactingShape.NONE),
 				ModCoreDataComponents.FILTER_ATTRIBUTES);
 	}
 
@@ -47,7 +47,7 @@ public class CompactingUpgradeWrapper extends UpgradeWrapperBase<CompactingUpgra
 	private void compactSlot(IItemHandlerSimpleInserter inventoryHandler, int slot) {
 		ItemStack slotStack = inventoryHandler.getStackInSlot(slot);
 
-		if (slotStack.isEmpty() || !slotStack.getComponentsPatch().isEmpty() || !filterLogic.matchesFilter(slotStack)) {
+		if (slotStack.isEmpty() || !filterLogic.matchesFilter(slotStack)) {
 			return;
 		}
 
